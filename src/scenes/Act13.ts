@@ -383,14 +383,20 @@ export class Act13Scene implements Scene {
       // Pick a random x, but avoid the gap around the pair center
       let x: number;
       if (Math.random() < 0.5) {
-        // Place left of gap
         x = cloudW * 0.5 + Math.random() * Math.max(0, pairCenterX - gapSize - cloudW * 0.5);
       } else {
-        // Place right of gap
         const rightStart = pairCenterX + gapSize;
         x = rightStart + Math.random() * Math.max(0, w - rightStart - cloudW * 0.5);
       }
       x = Math.max(cloudW * 0.5, Math.min(w - cloudW * 0.5, x));
+
+      // Check overlap with existing clouds near the top (y < 60)
+      const overlaps = this.clouds.some(c => {
+        if (c.y > 80) return false; // only check clouds still near spawn area
+        const minDist = (c.w + cloudW) * 0.45; // minimum horizontal gap between centers
+        return Math.abs(c.x - x) < minDist && Math.abs(c.y - (-40)) < 40;
+      });
+      if (overlaps) continue; // skip this cloud if it would overlap
 
       const side: 'left' | 'right' = x < w * 0.5 ? 'left' : 'right';
 
@@ -532,16 +538,12 @@ export class Act13Scene implements Scene {
     // Connection beam between characters
     this.drawConnectionBeam(ctx, t, scale);
 
-    // Draw characters (smaller scale for flight)
+    // Draw characters in hugging pose
     const charScale = scale * 1.0;
     const invBlink = this.beamInvincible > 0 && Math.sin(t * 20) > 0;
 
     if (invBlink) ctx.globalAlpha = 0.5;
-    drawElphaba(ctx, this.elphabaX, this.elphabaY, charScale, t);
-    if (invBlink) ctx.globalAlpha = 1;
-
-    if (invBlink) ctx.globalAlpha = 0.5;
-    drawGlinda(ctx, this.glindaX, this.glindaY, charScale, t);
+    this.drawHuggingPair(ctx, this.elphabaX, this.glindaX, this.elphabaY, charScale, t);
     if (invBlink) ctx.globalAlpha = 1;
 
     // Hit flash
@@ -596,6 +598,232 @@ export class Act13Scene implements Scene {
         ctx.fill();
       }
     }
+  }
+
+  private drawHuggingPair(ctx: CanvasRenderingContext2D, ex: number, gx: number, y: number, scale: number, time: number) {
+    const s = scale;
+    const bobble = Math.sin(time * 3) * 2 * s;
+    const capeWave = Math.sin(time * 4) * 5 * s;
+
+    // --- Elphaba (left, facing right toward Glinda) ---
+    ctx.save();
+    ctx.translate(ex, y + bobble);
+
+    // Cape (flows left, away from Glinda)
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.moveTo(-8 * s, -8 * s);
+    ctx.quadraticCurveTo(-22 * s + capeWave, 10 * s, -17 * s + capeWave * 1.3, 25 * s);
+    ctx.lineTo(-2 * s, 15 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = '#111122';
+    ctx.beginPath();
+    ctx.moveTo(-7 * s, -5 * s);
+    ctx.lineTo(-10 * s, 18 * s);
+    ctx.lineTo(8 * s, 18 * s);
+    ctx.lineTo(6 * s, -5 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Arm reaching toward Glinda (right arm extending right)
+    ctx.fillStyle = '#2ecc71';
+    ctx.beginPath();
+    ctx.moveTo(6 * s, -2 * s);
+    ctx.quadraticCurveTo(16 * s, -6 * s, 20 * s, -4 * s);
+    ctx.quadraticCurveTo(16 * s, 0, 6 * s, 2 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head (green, slight tilt toward Glinda)
+    ctx.fillStyle = '#2ecc71';
+    ctx.beginPath();
+    ctx.arc(1 * s, -15 * s, 10 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (looking right at Glinda)
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(-1 * s, -16 * s, 2 * s, 2.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(5 * s, -16 * s, 2 * s, 2.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, -17 * s, 0.8 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(6 * s, -17 * s, 0.8 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Happy smile
+    ctx.strokeStyle = '#1a8f4e';
+    ctx.lineWidth = 1.2 * s;
+    ctx.beginPath();
+    ctx.arc(2 * s, -13 * s, 4 * s, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // Hat
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.ellipse(1 * s, -24 * s, 14 * s, 4 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-8 * s, -25 * s);
+    ctx.lineTo(1 * s, -50 * s);
+    ctx.lineTo(10 * s, -25 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = COLORS.emeraldGlow;
+    ctx.fillRect(-3 * s, -30 * s, 8 * s, 3 * s);
+
+    // Hair (flows left)
+    ctx.fillStyle = '#0a0a0a';
+    ctx.beginPath();
+    ctx.moveTo(-10 * s, -18 * s);
+    ctx.quadraticCurveTo(-14 * s, -5 * s, -12 * s + capeWave * 0.5, 5 * s);
+    ctx.lineTo(-8 * s, -5 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+
+    // --- Glinda (right, facing left toward Elphaba) ---
+    ctx.save();
+    ctx.translate(gx, y + bobble);
+
+    // Gown
+    const grad = ctx.createLinearGradient(0, -5 * s, 0, 22 * s);
+    grad.addColorStop(0, '#ff69b4');
+    grad.addColorStop(1, '#ff99cc');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(6 * s, -5 * s);
+    ctx.quadraticCurveTo(14 * s, 10 * s, 12 * s, 20 * s);
+    ctx.lineTo(-12 * s, 20 * s);
+    ctx.quadraticCurveTo(-14 * s, 10 * s, -6 * s, -5 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Gown sparkles
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 6; i++) {
+      const sparkX = (Math.sin(i * 1.5) * 6) * s;
+      const sparkY = (2 + i * 3) * s;
+      ctx.globalAlpha = Math.sin(time * 2 + i) * 0.3 + 0.5;
+      ctx.beginPath();
+      ctx.arc(sparkX, sparkY, 1 * s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Arm reaching toward Elphaba (left arm extending left)
+    ctx.fillStyle = '#fdd5b1';
+    ctx.beginPath();
+    ctx.moveTo(-6 * s, -2 * s);
+    ctx.quadraticCurveTo(-16 * s, -6 * s, -20 * s, -4 * s);
+    ctx.quadraticCurveTo(-16 * s, 0, -6 * s, 2 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = '#fdd5b1';
+    ctx.beginPath();
+    ctx.arc(-1 * s, -14 * s, 10 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair (blonde curls)
+    ctx.fillStyle = '#f4d03f';
+    ctx.beginPath();
+    ctx.arc(7 * s, -18 * s, 5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, -22 * s, 6 * s, 0, Math.PI * 2);
+    ctx.fill();
+    // Flowing curl (right side, away from Elphaba)
+    const curlWave = Math.sin(time * 3) * 2 * s;
+    ctx.beginPath();
+    ctx.moveTo(9 * s, -16 * s);
+    ctx.quadraticCurveTo(13 * s - curlWave, -5 * s, 11 * s, 2 * s);
+    ctx.lineTo(7 * s, -5 * s);
+    ctx.closePath();
+    ctx.fill();
+
+    // Crown
+    ctx.fillStyle = COLORS.gold;
+    ctx.beginPath();
+    ctx.moveTo(-7 * s, -24 * s);
+    ctx.lineTo(-5 * s, -30 * s);
+    ctx.lineTo(-3 * s, -26 * s);
+    ctx.lineTo(-1 * s, -33 * s);
+    ctx.lineTo(1 * s, -26 * s);
+    ctx.lineTo(3 * s, -30 * s);
+    ctx.lineTo(5 * s, -24 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ff69b4';
+    ctx.beginPath();
+    ctx.arc(-1 * s, -28 * s, 1.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (looking left at Elphaba)
+    ctx.fillStyle = '#4a86c8';
+    ctx.beginPath();
+    ctx.ellipse(-5 * s, -15 * s, 2 * s, 2.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(1 * s, -15 * s, 2 * s, 2.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(-5 * s, -15 * s, 1.2 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(1 * s, -15 * s, 1.2 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-4 * s, -16 * s, 0.7 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(2 * s, -16 * s, 0.7 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Happy smile
+    ctx.strokeStyle = '#e8a090';
+    ctx.lineWidth = 1.2 * s;
+    ctx.beginPath();
+    ctx.arc(-2 * s, -12 * s, 4 * s, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // Blush
+    ctx.fillStyle = 'rgba(255, 150, 150, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(-8 * s, -12 * s, 2.5 * s, 1.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(4 * s, -12 * s, 2.5 * s, 1.5 * s, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // --- Heart glow between them ---
+    const midX = (ex + gx) / 2;
+    const heartPulse = 1 + Math.sin(time * 4) * 0.15;
+    const hs = 6 * s * heartPulse;
+    ctx.fillStyle = 'rgba(255, 100, 150, 0.25)';
+    ctx.beginPath();
+    ctx.arc(midX, y + bobble - 5 * s, hs * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ff4466';
+    ctx.beginPath();
+    ctx.moveTo(midX, y + bobble - 2 * s + hs * 0.6);
+    ctx.bezierCurveTo(midX - hs, y + bobble - 2 * s - hs * 0.2, midX - hs, y + bobble - 2 * s - hs * 0.8, midX, y + bobble - 2 * s - hs * 0.4);
+    ctx.bezierCurveTo(midX + hs, y + bobble - 2 * s - hs * 0.8, midX + hs, y + bobble - 2 * s - hs * 0.2, midX, y + bobble - 2 * s + hs * 0.6);
+    ctx.fill();
   }
 
   private drawAurora(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
