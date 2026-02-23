@@ -59,10 +59,10 @@ export class Act2Scene implements Scene {
 
   private levelWidth = 3500;
   private levelHeight = 800;
-  private gravity = 800;
-  private moveSpeed = 180;
-  private jumpForce = -380;
-  private maxJumpTime = 0.22;
+  private gravity = 600;
+  private moveSpeed = 220;
+  private jumpForce = -500;
+  private maxJumpTime = 0.28;
 
   private trailTimer = 0;
   private noteTimer = 0;
@@ -110,34 +110,34 @@ export class Act2Scene implements Scene {
     const groundY = lh - 30;
 
     this.platforms = [
-      // Ground sections — connected with smaller gaps for a child
-      { x: 0, y: groundY, w: 500, h: 30, type: 'emerald' },
-      { x: 550, y: groundY, w: 350, h: 30, type: 'default' },
-      { x: 950, y: groundY, w: 350, h: 30, type: 'emerald' },
-      { x: 1350, y: groundY, w: 400, h: 30, type: 'default' },
-      { x: 1800, y: groundY, w: 300, h: 30, type: 'emerald' },
-      { x: 2150, y: groundY, w: 350, h: 30, type: 'default' },
-      { x: 2550, y: groundY, w: 300, h: 30, type: 'emerald' },
-      { x: 2900, y: groundY, w: 500, h: 30, type: 'gold' },
+      // Ground sections — nearly continuous with small gaps, very forgiving
+      { x: 0, y: groundY, w: 550, h: 30, type: 'emerald' },
+      { x: 580, y: groundY, w: 400, h: 30, type: 'default' },
+      { x: 1010, y: groundY, w: 380, h: 30, type: 'emerald' },
+      { x: 1420, y: groundY, w: 420, h: 30, type: 'default' },
+      { x: 1870, y: groundY, w: 340, h: 30, type: 'emerald' },
+      { x: 2240, y: groundY, w: 360, h: 30, type: 'default' },
+      { x: 2630, y: groundY, w: 320, h: 30, type: 'emerald' },
+      { x: 2980, y: groundY, w: 520, h: 30, type: 'gold' },
 
-      // Elevated platforms — rooftops & bridges
-      { x: 200, y: groundY - 70, w: 120, h: 18, type: 'emerald' },
-      { x: 400, y: groundY - 130, w: 100, h: 18, type: 'default' },
-      { x: 620, y: groundY - 90, w: 130, h: 18, type: 'emerald' },
-      { x: 850, y: groundY - 150, w: 110, h: 18, type: 'gold' },
-      { x: 1050, y: groundY - 100, w: 150, h: 18, type: 'default' },
-      { x: 1250, y: groundY - 170, w: 100, h: 18, type: 'emerald' },
-      { x: 1450, y: groundY - 80, w: 130, h: 18, type: 'default' },
-      { x: 1650, y: groundY - 140, w: 110, h: 18, type: 'emerald' },
-      { x: 1850, y: groundY - 200, w: 100, h: 18, type: 'gold' },
+      // Elevated platforms — wider and reachable with the bigger jump
+      { x: 180, y: groundY - 70, w: 140, h: 18, type: 'emerald' },
+      { x: 380, y: groundY - 120, w: 130, h: 18, type: 'default' },
+      { x: 600, y: groundY - 80, w: 150, h: 18, type: 'emerald' },
+      { x: 830, y: groundY - 130, w: 130, h: 18, type: 'gold' },
+      { x: 1030, y: groundY - 90, w: 170, h: 18, type: 'default' },
+      { x: 1230, y: groundY - 140, w: 130, h: 18, type: 'emerald' },
+      { x: 1430, y: groundY - 70, w: 150, h: 18, type: 'default' },
+      { x: 1630, y: groundY - 120, w: 130, h: 18, type: 'emerald' },
+      { x: 1830, y: groundY - 160, w: 120, h: 18, type: 'gold' },
 
-      // Higher platforms
-      { x: 2050, y: groundY - 120, w: 110, h: 18, type: 'emerald' },
-      { x: 2250, y: groundY - 170, w: 100, h: 18, type: 'default' },
-      { x: 2450, y: groundY - 90, w: 130, h: 18, type: 'emerald' },
-      { x: 2650, y: groundY - 150, w: 110, h: 18, type: 'gold' },
-      { x: 2850, y: groundY - 100, w: 130, h: 18, type: 'default' },
-      { x: 3050, y: groundY - 80, w: 150, h: 18, type: 'gold' },
+      // Later platforms — still forgiving
+      { x: 2030, y: groundY - 100, w: 130, h: 18, type: 'emerald' },
+      { x: 2230, y: groundY - 140, w: 120, h: 18, type: 'default' },
+      { x: 2430, y: groundY - 80, w: 150, h: 18, type: 'emerald' },
+      { x: 2630, y: groundY - 120, w: 130, h: 18, type: 'gold' },
+      { x: 2830, y: groundY - 90, w: 150, h: 18, type: 'default' },
+      { x: 3030, y: groundY - 70, w: 170, h: 18, type: 'gold' },
 
       // Moving platforms — use moveTimer (starts at 0, increments by dt)
       { x: 500, y: groundY - 50, w: 80, h: 18, type: 'gold', moving: true, moveTimer: 0, moveRange: 60, origX: 500, origY: groundY - 50 },
@@ -206,16 +206,29 @@ export class Act2Scene implements Scene {
     const isElphaba = game.state.character === 'elphaba';
     const speed = this.speedTimer > 0 ? this.moveSpeed * 1.5 : this.moveSpeed;
 
-    // --- MOVEMENT ---
+    // --- MOVEMENT — follow finger directly ---
     this.playerVX = 0;
 
     if (game.input.isTouching) {
-      // Convert screen touch to world X and move toward it
+      // Convert screen touch to world position
       const worldTouchX = game.input.touchX + this.cameraX;
+      const worldTouchY = game.input.touchY + this.cameraY;
       const dx = worldTouchX - this.playerX;
-      if (Math.abs(dx) > 15) {
-        this.playerVX = Math.sign(dx) * speed;
+
+      // Move horizontally toward finger — fast lerp for responsive feel
+      if (Math.abs(dx) > 8) {
+        this.playerVX = Math.sign(dx) * Math.min(Math.abs(dx) * 4, speed * 1.5);
         this.facing = dx > 0 ? 1 : -1;
+      }
+
+      // Auto-jump when finger is above the player and player is on ground
+      if (worldTouchY < this.playerY - 30 && this.onGround && this.jumpCooldown <= 0) {
+        this.playerVY = this.jumpForce;
+        this.jumpHeld = true;
+        this.jumpTimer = 0;
+        this.onGround = false;
+        this.jumpCooldown = 0.25;
+        game.playSound('jump');
       }
     }
 
@@ -229,32 +242,35 @@ export class Act2Scene implements Scene {
       this.facing = 1;
     }
 
-    // --- JUMP ---
-    // Tap upper 40% of screen to jump (with cooldown to prevent spamming)
-    const touchJump = game.input.isTouching && (game.input.touchY / game.height) < 0.35;
+    // --- JUMP (keyboard / tap) ---
     const keyJump = game.input.jumpPressed;
 
-    if ((touchJump || keyJump) && this.onGround && this.jumpCooldown <= 0) {
+    if (keyJump && this.onGround && this.jumpCooldown <= 0) {
       this.playerVY = this.jumpForce;
       this.jumpHeld = true;
       this.jumpTimer = 0;
       this.onGround = false;
-      this.jumpCooldown = 0.3; // Prevent re-jump for 300ms
+      this.jumpCooldown = 0.25;
       game.playSound('jump');
     }
 
-    // Variable jump height — hold touch/key for higher jump
-    const holdingJump = game.input.jump || game.input.up || touchJump;
+    // Variable jump height — keep holding for higher jump
+    const holdingJump = game.input.jump || game.input.up || game.input.isTouching;
     if (this.jumpHeld && holdingJump && this.jumpTimer < this.maxJumpTime) {
       this.jumpTimer += dt;
     } else {
       this.jumpHeld = false;
     }
 
-    // Gravity (reduced while holding jump for variable height)
-    const gravityMult = (this.jumpHeld && this.playerVY < 0) ? 0.5 : 1;
+    // Gravity — reduced while holding jump or when finger is above (floaty, forgiving)
+    let gravityMult = 1;
+    if (this.jumpHeld && this.playerVY < 0) {
+      gravityMult = 0.4; // Rising with jump held — very floaty
+    } else if (game.input.isTouching && (game.input.touchY + this.cameraY) < this.playerY) {
+      gravityMult = 0.6; // Finger above — gentle float
+    }
     this.playerVY += this.gravity * gravityMult * dt;
-    if (this.playerVY > 500) this.playerVY = 500;
+    if (this.playerVY > 400) this.playerVY = 400; // Slower max fall speed
 
     // Move player
     this.playerX += this.playerVX * dt;
@@ -626,8 +642,8 @@ export class Act2Scene implements Scene {
     if (game.state.levelTime < 5) {
       const alpha = Math.max(0, 1 - game.state.levelTime / 5);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Drag to move!', w / 2, h * 0.83, 15 * scale, '#fff');
-      drawText(ctx, 'Touch top of screen to jump!', w / 2, h * 0.89, 13 * scale, '#ccc');
+      drawText(ctx, 'Touch where you want to go!', w / 2, h * 0.83, 15 * scale, '#fff');
+      drawText(ctx, 'Touch above to jump!', w / 2, h * 0.89, 13 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
   }
