@@ -1,6 +1,10 @@
 // Procedural audio system using Web Audio API — no external files needed
 
 let audioCtx: AudioContext | null = null;
+let muted = false;
+
+export function setMuted(m: boolean) { muted = m; }
+export function getMuted(): boolean { return muted; }
 
 function getCtx(): AudioContext {
   if (!audioCtx) {
@@ -13,6 +17,7 @@ function getCtx(): AudioContext {
 }
 
 function playNote(freq: number, duration: number, type: OscillatorType = 'sine', volume = 0.15, delay = 0) {
+  if (muted) return;
   const ctx = getCtx();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();

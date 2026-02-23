@@ -6,8 +6,8 @@ import {
 } from './types';
 import { InputManager } from './input';
 import { ParticleSystem, particlePresets } from './particles';
-import { playSound, initAudio, startBgMusic, stopBgMusic } from './audio';
-import { drawTransition } from './renderer';
+import { playSound, initAudio, startBgMusic, stopBgMusic, setMuted, getMuted } from './audio';
+import { drawTransition, drawText, COLORS } from './renderer';
 
 // Import scenes
 import { SplashScene } from '../scenes/Splash';
@@ -32,6 +32,7 @@ import { Act15Scene } from '../scenes/Act15';
 import { VictoryScene } from '../scenes/Victory';
 
 const SAVE_KEY = 'havis-wicked-adventure-save';
+const MUTE_KEY = 'havis-wicked-adventure-mute';
 
 function createInitialState(): GameState {
   return {
@@ -57,6 +58,10 @@ function createInitialState(): GameState {
     transitionTarget: null,
   };
 }
+
+// Pause button layout constants
+const PAUSE_BTN_SIZE = 32;
+const PAUSE_BTN_MARGIN = 12;
 
 export class Game implements GameEngine {
   canvas: HTMLCanvasElement;
@@ -111,6 +116,12 @@ export class Game implements GameEngine {
       this.state.lastCompletedAct = save.lastCompletedAct;
       if (save.character) this.state.character = save.character;
     }
+
+    // Load mute preference
+    try {
+      const m = localStorage.getItem(MUTE_KEY);
+      if (m === 'true') setMuted(true);
+    } catch { /* ignore */ }
 
     this.resize();
     window.addEventListener('resize', () => this.resize());
@@ -178,6 +189,206 @@ export class Game implements GameEngine {
     stopBgMusic();
   }
 
+  private isGameplayScene(): boolean {
+    return this.state.currentScene === 'gameplay';
+  }
+
+  private getPauseBtnBounds() {
+    const scale = this.getScale();
+    const size = PAUSE_BTN_SIZE * scale;
+    const margin = PAUSE_BTN_MARGIN * scale;
+    return {
+      x: this.width - size - margin,
+      y: margin,
+      w: size,
+      h: size,
+    };
+  }
+
+  private getPauseMenuButtons(scale: number) {
+    const w = this.width;
+    const h = this.height;
+    const btnW = 180 * scale;
+    const btnH = 44 * scale;
+    const gap = 16 * scale;
+    const startY = h * 0.42;
+    const cx = w / 2 - btnW / 2;
+
+    return {
+      resume: { x: cx, y: startY, w: btnW, h: btnH, label: 'Resume' },
+      restart: { x: cx, y: startY + btnH + gap, w: btnW, h: btnH, label: 'Restart Level' },
+      menu: { x: cx, y: startY + 2 * (btnH + gap), w: btnW, h: btnH, label: 'Level Select' },
+      mute: { x: cx, y: startY + 3 * (btnH + gap), w: btnW, h: btnH, label: getMuted() ? 'Sound: OFF' : 'Sound: ON' },
+    };
+  }
+
+  private handlePauseInput() {
+    if (!this.input.tap) return;
+    const tx = this.input.tapX;
+    const ty = this.input.tapY;
+
+    if (!this.state.isPaused) {
+      // Check pause button tap (only during gameplay, not during act complete)
+      if (this.isGameplayScene() && !this.state.actComplete && !this.state.transitionDirection) {
+        const btn = this.getPauseBtnBounds();
+        if (tx >= btn.x && tx <= btn.x + btn.w && ty >= btn.y && ty <= btn.y + btn.h) {
+          this.state.isPaused = true;
+          playSound('menuSelect');
+          // Consume the tap so the act scene doesn't get it
+          this.inputManager.clearTap();
+        }
+      }
+    } else {
+      // Check pause menu button taps
+      const scale = this.getScale();
+      const btns = this.getPauseMenuButtons(scale);
+
+      if (this.hitTest(tx, ty, btns.resume)) {
+        this.state.isPaused = false;
+        playSound('menuSelect');
+      } else if (this.hitTest(tx, ty, btns.restart)) {
+        this.state.isPaused = false;
+        // Reset per-act state
+        this.state.gems = 0;
+        this.state.score = 0;
+        this.state.health = 3;
+        this.state.maxHealth = 3;
+        this.state.noHitBonus = true;
+        this.state.levelTime = 0;
+        this.state.actComplete = false;
+        if (this.state.currentAct === 'act3') {
+          this.state.bossHealth = this.state.bossMaxHealth;
+        }
+        // Re-create and enter the scene
+        this.changeScene('gameplay');
+        playSound('menuSelect');
+      } else if (this.hitTest(tx, ty, btns.menu)) {
+        this.state.isPaused = false;
+        stopBgMusic();
+        this.transitionTo('levelSelect');
+        playSound('menuBack');
+      } else if (this.hitTest(tx, ty, btns.mute)) {
+        const newMuted = !getMuted();
+        setMuted(newMuted);
+        if (newMuted) {
+          stopBgMusic();
+        }
+        try {
+          localStorage.setItem(MUTE_KEY, String(newMuted));
+        } catch { /* ignore */ }
+        playSound('menuSelect');
+      }
+      // Consume tap so it doesn't pass through to the paused scene
+      this.inputManager.clearTap();
+    }
+  }
+
+  private hitTest(tx: number, ty: number, rect: { x: number; y: number; w: number; h: number }) {
+    return tx >= rect.x && tx <= rect.x + rect.w && ty >= rect.y && ty <= rect.y + rect.h;
+  }
+
+  private renderPauseButton(ctx: CanvasRenderingContext2D) {
+    if (!this.isGameplayScene() || this.state.actComplete || this.state.isPaused) return;
+
+    const btn = this.getPauseBtnBounds();
+    const scale = this.getScale();
+
+    // Semi-transparent background circle
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.beginPath();
+    ctx.arc(btn.x + btn.w / 2, btn.y + btn.h / 2, btn.w / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pause bars
+    ctx.fillStyle = COLORS.gold;
+    const barW = 4 * scale;
+    const barH = 14 * scale;
+    const cx = btn.x + btn.w / 2;
+    const cy = btn.y + btn.h / 2;
+    ctx.fillRect(cx - barW - 2 * scale, cy - barH / 2, barW, barH);
+    ctx.fillRect(cx + 2 * scale, cy - barH / 2, barW, barH);
+  }
+
+  private renderPauseOverlay(ctx: CanvasRenderingContext2D) {
+    if (!this.state.isPaused) return;
+
+    const w = this.width;
+    const h = this.height;
+    const scale = this.getScale();
+
+    // Dark overlay
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Decorative border
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.4;
+    const m = 25 * scale;
+    ctx.strokeRect(m, m, w - m * 2, h - m * 2);
+    ctx.globalAlpha = 1;
+
+    // Title
+    drawText(ctx, 'PAUSED', w / 2, h * 0.25, 28 * scale, COLORS.gold);
+
+    // Act info
+    const actNum = this.state.currentAct.replace('act', '');
+    drawText(ctx, `Act ${actNum}`, w / 2, h * 0.33, 14 * scale, '#aaa');
+
+    // Menu buttons
+    const btns = this.getPauseMenuButtons(scale);
+
+    for (const btn of [btns.resume, btns.restart, btns.menu, btns.mute]) {
+      // Button background
+      const isResume = btn === btns.resume;
+      const isMute = btn === btns.mute;
+      const grad = ctx.createLinearGradient(btn.x, btn.y, btn.x, btn.y + btn.h);
+
+      if (isResume) {
+        grad.addColorStop(0, 'rgba(0, 100, 50, 0.7)');
+        grad.addColorStop(1, 'rgba(0, 70, 35, 0.7)');
+      } else if (isMute) {
+        grad.addColorStop(0, getMuted() ? 'rgba(100, 40, 40, 0.6)' : 'rgba(40, 80, 100, 0.6)');
+        grad.addColorStop(1, getMuted() ? 'rgba(70, 25, 25, 0.6)' : 'rgba(25, 55, 70, 0.6)');
+      } else {
+        grad.addColorStop(0, 'rgba(60, 30, 60, 0.6)');
+        grad.addColorStop(1, 'rgba(40, 20, 40, 0.6)');
+      }
+      ctx.fillStyle = grad;
+
+      // Rounded rect
+      const r = 8 * scale;
+      ctx.beginPath();
+      ctx.moveTo(btn.x + r, btn.y);
+      ctx.lineTo(btn.x + btn.w - r, btn.y);
+      ctx.arcTo(btn.x + btn.w, btn.y, btn.x + btn.w, btn.y + r, r);
+      ctx.lineTo(btn.x + btn.w, btn.y + btn.h - r);
+      ctx.arcTo(btn.x + btn.w, btn.y + btn.h, btn.x + btn.w - r, btn.y + btn.h, r);
+      ctx.lineTo(btn.x + r, btn.y + btn.h);
+      ctx.arcTo(btn.x, btn.y + btn.h, btn.x, btn.y + btn.h - r, r);
+      ctx.lineTo(btn.x, btn.y + r);
+      ctx.arcTo(btn.x, btn.y, btn.x + r, btn.y, r);
+      ctx.closePath();
+      ctx.fill();
+
+      // Border
+      ctx.strokeStyle = isResume ? COLORS.emeraldGlow : COLORS.gold;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Label
+      const color = isResume ? COLORS.emeraldGlow : isMute ? (getMuted() ? '#ff9999' : '#99ccff') : '#ddd';
+      drawText(ctx, btn.label, btn.x + btn.w / 2, btn.y + btn.h / 2, 14 * scale, color);
+    }
+
+    // Hint
+    ctx.globalAlpha = 0.4;
+    drawText(ctx, 'Tap a button to continue', w / 2, h * 0.88, 10 * scale, '#aaa');
+    ctx.globalAlpha = 1;
+  }
+
   private loop = (timestamp: number) => {
     if (!this.running) return;
     this.rafId = requestAnimationFrame(this.loop);
@@ -192,6 +403,9 @@ export class Game implements GameEngine {
 
     // Update input
     this.inputManager.update();
+
+    // Handle pause input BEFORE scene update (so pause button intercepts taps)
+    this.handlePauseInput();
 
     // Handle transition
     if (this.state.transitionDirection) {
@@ -221,8 +435,10 @@ export class Game implements GameEngine {
       if (scene) scene.update(this, dt);
     }
 
-    // Update particles
-    this.particleSystem.update(dt);
+    // Update particles (only if not paused)
+    if (!this.state.isPaused) {
+      this.particleSystem.update(dt);
+    }
 
     // Clear and render (use canvas pixel dimensions to clear entire canvas)
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -232,6 +448,12 @@ export class Game implements GameEngine {
 
     // Render particles (screen space)
     this.particleSystem.render(this.ctx);
+
+    // Render pause button (on top of gameplay)
+    this.renderPauseButton(this.ctx);
+
+    // Render pause overlay (on top of everything)
+    this.renderPauseOverlay(this.ctx);
 
     // Render transition overlay
     if (this.state.transitionAlpha > 0) {
