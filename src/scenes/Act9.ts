@@ -1,5 +1,6 @@
 // Act 9 — 'Finale (For Good Reprise)' — Rhythm Tap
-// Musical notes fall in 3 columns. Tap the correct column when notes reach the target zone.
+// Musical notes fall gently in 3 columns. Tap when they reach the glowing zone!
+// Designed to be fun and forgiving for a child.
 import { Scene, GameEngine } from '../engine/types';
 import { drawText, drawElphaba, drawGlinda, drawHealth, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
@@ -14,11 +15,23 @@ interface RhythmNote {
   active: boolean;
 }
 
+// Pre-designed note patterns that feel musical (column sequences)
+const NOTE_PATTERNS: (0 | 1 | 2)[][] = [
+  [1, 0, 1, 2, 1],           // center-left-center-right-center
+  [0, 1, 2, 1, 0],           // sweep left to right and back
+  [1, 1, 0, 1, 1, 2],        // center-heavy with sides
+  [0, 0, 2, 2, 1],           // left-left-right-right-center
+  [2, 1, 0, 1, 2],           // sweep right to left and back
+  [1, 0, 2, 1, 0, 2],        // alternating sides
+  [0, 1, 2, 2, 1, 0],        // zigzag
+  [1, 2, 1, 0, 1],           // center bounce
+];
+
 export class Act9Scene implements Scene {
   private notes: RhythmNote[] = [];
   private spawnTimer = 0;
-  private noteSpeed = 250;
-  private noteInterval = 1.0;
+  private noteSpeed = 0;
+  private noteInterval = 0;
   private combo = 0;
   private maxCombo = 0;
   private totalNotes = 0;
@@ -27,22 +40,33 @@ export class Act9Scene implements Scene {
   private columnTapAlpha: number[] = [0, 0, 0];
   private hitFlash: { result: string; col: number; timer: number } | null = null;
   private targetZoneY = 0;
-  private targetZoneH = 60;
+  private targetZoneH = 0;
   private columnX: number[] = [];
   private columnW = 0;
   private noteTimer = 0;
+  private patternIndex = 0;
+  private patternStep = 0;
+  private encourageText = '';
+  private encourageTimer = 0;
+  private noteSize = 0;
 
   enter(game: GameEngine) {
     const w = game.width;
     const h = game.height;
-    this.targetZoneY = h * 0.78;
-    this.targetZoneH = 60;
-    this.columnW = w * 0.28;
-    this.columnX = [w * 0.18, w * 0.5, w * 0.82];
+    const scale = game.getScale();
+
+    // Generous target zone — big and visible
+    this.targetZoneH = 90 * scale;
+    this.targetZoneY = h * 0.74;
+    this.columnW = w * 0.30;
+    this.columnX = [w * 0.17, w * 0.5, w * 0.83];
+    this.noteSize = Math.max(16, 18 * scale);
+
     this.notes = [];
     this.spawnTimer = 0;
-    this.noteSpeed = 250;
-    this.noteInterval = 1.0;
+    // Slow, gentle note speed
+    this.noteSpeed = 130 * scale;
+    this.noteInterval = 1.8;
     this.combo = 0;
     this.maxCombo = 0;
     this.totalNotes = 0;
@@ -51,11 +75,15 @@ export class Act9Scene implements Scene {
     this.columnTapAlpha = [0, 0, 0];
     this.hitFlash = null;
     this.noteTimer = 0;
+    this.patternIndex = Math.floor(Math.random() * NOTE_PATTERNS.length);
+    this.patternStep = 0;
+    this.encourageText = '';
+    this.encourageTimer = 0;
 
     game.state.gems = 0;
     game.state.score = 0;
-    game.state.health = 5;
-    game.state.maxHealth = 5;
+    game.state.health = 8;
+    game.state.maxHealth = 8;
     game.state.noHitBonus = true;
     game.state.levelTime = 0;
     game.state.actComplete = false;
@@ -70,24 +98,38 @@ export class Act9Scene implements Scene {
   update(game: GameEngine, dt: number) {
     if (game.state.actComplete) return;
 
+    const scale = game.getScale();
     game.state.levelTime += dt;
     this.spawnTimer += dt;
     this.noteTimer += dt;
 
-    // Update column tap effects
+    // Fade column tap effects
     for (let i = 0; i < 3; i++) {
-      if (this.columnTapAlpha[i] > 0) this.columnTapAlpha[i] -= dt * 4;
+      if (this.columnTapAlpha[i] > 0) this.columnTapAlpha[i] -= dt * 3;
     }
     if (this.hitFlash) {
       this.hitFlash.timer -= dt;
       if (this.hitFlash.timer <= 0) this.hitFlash = null;
     }
+    if (this.encourageTimer > 0) this.encourageTimer -= dt;
 
-    // Spawn notes
-    this.noteInterval = Math.max(0.6, 1.0 - game.state.levelTime * 0.006);
+    // Very gentle speed ramp — barely noticeable
+    this.noteSpeed = (130 + Math.min(game.state.levelTime * 0.5, 30)) * scale;
+    // Interval ramps slowly: 1.8s → 1.2s over 45 seconds
+    this.noteInterval = Math.max(1.2, 1.8 - game.state.levelTime * 0.013);
+
+    // Spawn notes from musical patterns (never double notes)
     if (this.spawnTimer >= this.noteInterval) {
       this.spawnTimer = 0;
-      const col = Math.floor(Math.random() * 3) as 0 | 1 | 2;
+
+      const pattern = NOTE_PATTERNS[this.patternIndex];
+      const col = pattern[this.patternStep];
+      this.patternStep++;
+      if (this.patternStep >= pattern.length) {
+        this.patternStep = 0;
+        this.patternIndex = (this.patternIndex + 1) % NOTE_PATTERNS.length;
+      }
+
       this.notes.push({
         column: col,
         y: -30,
@@ -97,20 +139,6 @@ export class Act9Scene implements Scene {
         active: true,
       });
       this.totalNotes++;
-
-      // Sometimes spawn a second note in another column for challenge
-      if (game.state.levelTime > 20 && Math.random() < 0.2) {
-        let col2 = (col + 1 + Math.floor(Math.random() * 2)) % 3 as 0 | 1 | 2;
-        this.notes.push({
-          column: col2,
-          y: -30,
-          speed: this.noteSpeed,
-          state: 'falling',
-          hitAlpha: 0,
-          active: true,
-        });
-        this.totalNotes++;
-      }
     }
 
     // Move notes
@@ -118,11 +146,12 @@ export class Act9Scene implements Scene {
       if (note.state === 'falling') {
         note.y += note.speed * dt;
       }
-      if (note.hitAlpha > 0) note.hitAlpha -= dt * 3;
+      if (note.hitAlpha > 0) note.hitAlpha -= dt * 2;
     }
 
-    // Miss detection — note passed target zone
-    const missLine = this.targetZoneY + this.targetZoneH / 2 + 40;
+    // Miss detection — very generous, notes travel well past before counting
+    const targetCenter = this.targetZoneY + this.targetZoneH / 2;
+    const missLine = targetCenter + this.targetZoneH * 0.8;
     for (const note of this.notes) {
       if (note.state === 'falling' && note.y > missLine) {
         note.state = 'missed';
@@ -131,36 +160,42 @@ export class Act9Scene implements Scene {
         game.state.noHitBonus = false;
         this.combo = 0;
         game.playSound('hit');
-        game.shakeCamera(3, 0.15);
+        game.shakeCamera(2, 0.1);
         if (game.state.health <= 0) {
-          this.enter(game);
+          // Don't restart — just end and let them try again
+          game.state.actComplete = true;
+          this.failAct(game);
           return;
         }
       }
     }
 
-    // Tap detection
+    // Tap detection — generous hit windows
     if (game.input.tap) {
       const tapX = game.input.tapX;
       let tappedCol = -1;
-      for (let i = 0; i < 3; i++) {
-        if (Math.abs(tapX - this.columnX[i]) < this.columnW / 2) {
-          tappedCol = i;
-          break;
-        }
+
+      // Very forgiving column detection — covers full screen width
+      if (tapX < game.width * 0.33) {
+        tappedCol = 0;
+      } else if (tapX < game.width * 0.66) {
+        tappedCol = 1;
+      } else {
+        tappedCol = 2;
       }
 
       if (tappedCol >= 0) {
         this.columnTapAlpha[tappedCol] = 1;
-        const targetCenter = this.targetZoneY + this.targetZoneH / 2;
 
-        // Find frontmost falling note in this column within hit window
+        // Find closest falling note in this column within generous hit window
         let best: RhythmNote | null = null;
         let bestDist = Infinity;
+        const hitWindow = this.targetZoneH * 0.9;
+
         for (const note of this.notes) {
           if (note.state !== 'falling' || note.column !== tappedCol) continue;
           const delta = Math.abs(note.y - targetCenter);
-          if (delta < 60 && delta < bestDist) {
+          if (delta < hitWindow && delta < bestDist) {
             best = note;
             bestDist = delta;
           }
@@ -168,8 +203,10 @@ export class Act9Scene implements Scene {
 
         if (best) {
           const delta = Math.abs(best.y - targetCenter);
-          if (delta < 22) {
-            // Perfect hit
+          const perfectWindow = this.targetZoneH * 0.4;
+
+          if (delta < perfectWindow) {
+            // Perfect hit!
             best.state = 'hit_perfect';
             best.hitAlpha = 1;
             this.hitNotes++;
@@ -181,7 +218,18 @@ export class Act9Scene implements Scene {
             game.state.gems++;
             game.playSound('rhythmPerfect');
             game.spawnParticles(particlePresets.gemCollect(this.columnX[tappedCol], this.targetZoneY, true));
-            this.hitFlash = { result: 'PERFECT', col: tappedCol, timer: 0.5 };
+
+            const perfects = ['PERFECT!', 'AMAZING!', 'WOW!', 'SUPERSTAR!'];
+            this.hitFlash = {
+              result: perfects[Math.floor(Math.random() * perfects.length)],
+              col: tappedCol,
+              timer: 0.6,
+            };
+
+            // Encouragement at milestones
+            if (this.combo === 5) this.showEncouragement('You got this!');
+            else if (this.combo === 10) this.showEncouragement('On fire!');
+            else if (this.combo === 15) this.showEncouragement('Unstoppable!');
           } else {
             // Good hit
             best.state = 'hit_good';
@@ -192,33 +240,45 @@ export class Act9Scene implements Scene {
             const bonus = Math.floor(150 * (1 + this.combo * 0.1));
             game.state.score += bonus;
             game.playSound('rhythmGood');
-            this.hitFlash = { result: 'GOOD', col: tappedCol, timer: 0.4 };
+
+            const goods = ['NICE!', 'GREAT!', 'GOOD!'];
+            this.hitFlash = {
+              result: goods[Math.floor(Math.random() * goods.length)],
+              col: tappedCol,
+              timer: 0.5,
+            };
           }
         }
+        // No penalty for tapping wrong column — just no reward
       }
     }
 
-    // Clean up
+    // Clean up old notes
     this.notes = this.notes.filter(n => n.active && n.hitAlpha > -1 && n.y < game.height + 50);
 
-    // Musical sparkles
-    if (this.noteTimer > 2) {
+    // Ambient sparkles
+    if (this.noteTimer > 2.5) {
       this.noteTimer = 0;
       game.spawnParticles(particlePresets.musicalNote(Math.random() * game.width, game.height * 0.1));
     }
 
-    // Win condition — survive 60 seconds
-    if (game.state.levelTime >= 60) {
+    // Win condition — survive 45 seconds
+    if (game.state.levelTime >= 45 && !game.state.actComplete) {
       game.state.actComplete = true;
       this.completeAct(game);
     }
   }
 
+  private showEncouragement(text: string) {
+    this.encourageText = text;
+    this.encourageTimer = 1.5;
+  }
+
   private completeAct(game: GameEngine) {
     const accuracy = this.totalNotes > 0 ? this.hitNotes / this.totalNotes : 0;
     let stars = 1;
+    if (accuracy >= 0.65) stars++;
     if (accuracy >= 0.80) stars++;
-    if (accuracy >= 0.95) stars++;
     game.state.stars.act9 = Math.max(game.state.stars.act9 || 0, stars);
 
     if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act9') {
@@ -228,7 +288,7 @@ export class Act9Scene implements Scene {
     game.playSound('actComplete');
     game.playSound('victoryFanfare');
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 12; i++) {
       setTimeout(() => {
         game.spawnParticles(particlePresets.confetti(Math.random() * game.width, game.height * 0.3));
       }, i * 150);
@@ -236,7 +296,14 @@ export class Act9Scene implements Scene {
 
     setTimeout(() => {
       game.transitionTo('victory');
-    }, 3000);
+    }, 3500);
+  }
+
+  private failAct(game: GameEngine) {
+    game.playSound('hit');
+    setTimeout(() => {
+      game.transitionTo('levelSelect');
+    }, 2000);
   }
 
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {
@@ -246,24 +313,24 @@ export class Act9Scene implements Scene {
     const t = game.time;
     const isElphaba = game.state.character === 'elphaba';
 
-    // Background — concert hall
+    // Background — grand concert hall
     const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
-    bgGrad.addColorStop(0, '#150030');
-    bgGrad.addColorStop(0.5, '#0d0020');
+    bgGrad.addColorStop(0, '#180035');
+    bgGrad.addColorStop(0.4, '#100025');
     bgGrad.addColorStop(1, '#08001a');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, w, h);
 
-    // Spotlight cones from top
+    // Spotlight cones from top — brighter and more dramatic
     for (let i = 0; i < 3; i++) {
       const spotGrad = ctx.createRadialGradient(
         this.columnX[i], 0, 0,
-        this.columnX[i], h * 0.5, w * 0.25
+        this.columnX[i], h * 0.6, w * 0.25
       );
       const colors = [
-        'rgba(0, 200, 100, 0.04)',
-        'rgba(255, 215, 0, 0.04)',
-        'rgba(200, 80, 200, 0.04)',
+        'rgba(0, 200, 100, 0.06)',
+        'rgba(255, 215, 0, 0.06)',
+        'rgba(200, 80, 200, 0.06)',
       ];
       spotGrad.addColorStop(0, colors[i]);
       spotGrad.addColorStop(1, 'transparent');
@@ -271,16 +338,17 @@ export class Act9Scene implements Scene {
       ctx.fillRect(0, 0, w, h);
     }
 
-    // Column zones
+    // Column zones with clearer coloring
     const colColors = [COLORS.emeraldGlow, COLORS.gold, COLORS.pinkGlow];
+    const colLabels = ['\u266B', '\u2605', '\u266A']; // musical note, star, note
     for (let i = 0; i < 3; i++) {
       // Column background
-      ctx.fillStyle = `rgba(${i === 0 ? '0,100,50' : i === 1 ? '100,80,0' : '100,0,80'}, 0.08)`;
+      ctx.fillStyle = `rgba(${i === 0 ? '0,100,50' : i === 1 ? '100,80,0' : '100,0,80'}, 0.06)`;
       ctx.fillRect(this.columnX[i] - this.columnW / 2, 0, this.columnW, h);
 
-      // Column border
+      // Column divider lines (subtle)
       ctx.strokeStyle = colColors[i];
-      ctx.globalAlpha = 0.2;
+      ctx.globalAlpha = 0.15;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(this.columnX[i] - this.columnW / 2, 0);
@@ -292,22 +360,40 @@ export class Act9Scene implements Scene {
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      // Tap flash
+      // Column label at top
+      ctx.globalAlpha = 0.3;
+      drawText(ctx, colLabels[i], this.columnX[i], 40 * scale, 14 * scale, colColors[i]);
+      ctx.globalAlpha = 1;
+
+      // Tap flash — whole column lights up
       if (this.columnTapAlpha[i] > 0) {
         ctx.fillStyle = colColors[i];
-        ctx.globalAlpha = this.columnTapAlpha[i] * 0.15;
+        ctx.globalAlpha = this.columnTapAlpha[i] * 0.12;
         ctx.fillRect(this.columnX[i] - this.columnW / 2, 0, this.columnW, h);
         ctx.globalAlpha = 1;
       }
     }
 
-    // Target zone — glowing band
-    const zoneGlow = Math.sin(t * 3) * 0.1 + 0.3;
-    ctx.fillStyle = `rgba(255, 215, 0, ${zoneGlow})`;
+    // Target zone — big, bright glowing band
+    const zoneGlow = Math.sin(t * 2.5) * 0.08 + 0.25;
+    // Outer glow
+    const glowGrad = ctx.createLinearGradient(0, this.targetZoneY - 20, 0, this.targetZoneY + this.targetZoneH + 20);
+    glowGrad.addColorStop(0, 'transparent');
+    glowGrad.addColorStop(0.15, `rgba(255, 215, 0, ${zoneGlow * 0.3})`);
+    glowGrad.addColorStop(0.5, `rgba(255, 215, 0, ${zoneGlow})`);
+    glowGrad.addColorStop(0.85, `rgba(255, 215, 0, ${zoneGlow * 0.3})`);
+    glowGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = glowGrad;
+    ctx.fillRect(0, this.targetZoneY - 20, w, this.targetZoneH + 40);
+
+    // Target zone core
+    ctx.fillStyle = `rgba(255, 215, 0, ${zoneGlow * 0.5})`;
     ctx.fillRect(0, this.targetZoneY, w, this.targetZoneH);
+
+    // Target zone border lines
     ctx.strokeStyle = COLORS.gold;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = 0.7;
     ctx.beginPath();
     ctx.moveTo(0, this.targetZoneY);
     ctx.lineTo(w, this.targetZoneY);
@@ -318,7 +404,20 @@ export class Act9Scene implements Scene {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // Falling notes
+    // Center line in target zone (the "sweet spot")
+    ctx.strokeStyle = COLORS.gold;
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(0, this.targetZoneY + this.targetZoneH / 2);
+    ctx.lineTo(w, this.targetZoneY + this.targetZoneH / 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // Falling notes — big, colorful, and clear
+    const ns = this.noteSize;
     for (const note of this.notes) {
       if (note.state === 'missed') continue;
       const nx = this.columnX[note.column];
@@ -326,99 +425,184 @@ export class Act9Scene implements Scene {
       const col = colColors[note.column];
 
       if (note.state === 'falling') {
-        // Note shape — diamond
+        // Soft trail behind note
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = col;
+        ctx.fillRect(nx - ns * 0.3, ny - ns * 2, ns * 0.6, ns * 2);
+        ctx.globalAlpha = 1;
+
+        // Note shape — big rounded diamond with glow
+        // Outer glow
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 12;
         ctx.fillStyle = col;
         ctx.beginPath();
-        ctx.moveTo(nx, ny - 12);
-        ctx.lineTo(nx + 10, ny);
-        ctx.lineTo(nx, ny + 12);
-        ctx.lineTo(nx - 10, ny);
+        ctx.moveTo(nx, ny - ns);
+        ctx.lineTo(nx + ns * 0.8, ny);
+        ctx.lineTo(nx, ny + ns);
+        ctx.lineTo(nx - ns * 0.8, ny);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
 
-        // Inner glow
+        // Inner bright core
         ctx.fillStyle = '#fff';
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.6;
         ctx.beginPath();
-        ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+        ctx.moveTo(nx, ny - ns * 0.5);
+        ctx.lineTo(nx + ns * 0.4, ny);
+        ctx.lineTo(nx, ny + ns * 0.5);
+        ctx.lineTo(nx - ns * 0.4, ny);
+        ctx.closePath();
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Music note symbol
+        // Music note symbol in center
         ctx.fillStyle = '#000';
-        ctx.font = `${10 * scale}px serif`;
+        ctx.globalAlpha = 0.7;
+        ctx.font = `bold ${ns * 0.7}px serif`;
         ctx.textAlign = 'center';
-        ctx.fillText('\u266A', nx, ny + 4);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('\u266A', nx, ny + 1);
+        ctx.globalAlpha = 1;
       } else if (note.hitAlpha > 0) {
-        // Hit explosion
+        // Hit explosion — bigger and more celebratory
         const isPerfect = note.state === 'hit_perfect';
+        const explodeR = (1 - note.hitAlpha) * 45 + 15;
         ctx.globalAlpha = note.hitAlpha;
-        ctx.fillStyle = isPerfect ? COLORS.gold : COLORS.emeraldGlow;
+
+        // Outer ring
+        ctx.strokeStyle = isPerfect ? COLORS.gold : COLORS.emeraldGlow;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(nx, this.targetZoneY + this.targetZoneH / 2, (1 - note.hitAlpha) * 30 + 10, 0, Math.PI * 2);
+        ctx.arc(nx, this.targetZoneY + this.targetZoneH / 2, explodeR, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner fill
+        ctx.fillStyle = isPerfect ? COLORS.gold : COLORS.emeraldGlow;
+        ctx.globalAlpha = note.hitAlpha * 0.4;
+        ctx.beginPath();
+        ctx.arc(nx, this.targetZoneY + this.targetZoneH / 2, explodeR * 0.6, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
       }
     }
 
-    // Hit result flash
+    // Hit result flash — big text
     if (this.hitFlash) {
       const fx = this.columnX[this.hitFlash.col];
-      const fy = this.targetZoneY - 20;
-      const isPerfect = this.hitFlash.result === 'PERFECT';
+      const fy = this.targetZoneY - 25 * scale;
+      const isPerfect = this.hitFlash.result.includes('PERFECT') ||
+        this.hitFlash.result.includes('AMAZING') ||
+        this.hitFlash.result.includes('WOW') ||
+        this.hitFlash.result.includes('SUPERSTAR');
+      const flashScale = 1 + (1 - Math.min(1, this.hitFlash.timer * 3)) * 0.2;
       ctx.globalAlpha = Math.min(1, this.hitFlash.timer * 3);
-      drawText(ctx, this.hitFlash.result, fx, fy, (isPerfect ? 16 : 14) * scale,
+      drawText(ctx, this.hitFlash.result, fx, fy,
+        (isPerfect ? 18 : 15) * scale * flashScale,
         isPerfect ? COLORS.gold : COLORS.emeraldGlow);
       ctx.globalAlpha = 1;
     }
 
-    // Characters at bottom
+    // Encouragement text (center screen)
+    if (this.encourageTimer > 0) {
+      const eAlpha = Math.min(1, this.encourageTimer);
+      ctx.globalAlpha = eAlpha;
+      const eScale = 1 + (1 - eAlpha) * 0.3;
+      drawText(ctx, this.encourageText, w / 2, h * 0.35,
+        22 * scale * eScale, COLORS.pinkGlow);
+      ctx.globalAlpha = 1;
+    }
+
+    // Characters at bottom — performing together
     const charY = h * 0.92;
-    const charScale = scale * 0.9;
-    drawElphaba(ctx, w * 0.22, charY, charScale, t, {
+    const charScale = scale * 0.85;
+    // Characters bob slightly to the rhythm
+    const bob = Math.sin(t * 3) * 2;
+    drawElphaba(ctx, w * 0.25, charY + bob, charScale, t, {
       sparkly: game.state.unlockedCostumes.includes('elphaba_sparkly'),
     });
-    drawGlinda(ctx, w * 0.78, charY, charScale, t, {
+    drawGlinda(ctx, w * 0.75, charY - bob, charScale, t, {
       goldenWings: game.state.unlockedCostumes.includes('glinda_wings'),
       wand: true,
     });
 
-    // Combo display
+    // Stage floor
+    ctx.fillStyle = 'rgba(255, 215, 0, 0.05)';
+    ctx.fillRect(0, h * 0.88, w, h * 0.12);
+    ctx.strokeStyle = COLORS.gold;
+    ctx.globalAlpha = 0.2;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.88);
+    ctx.lineTo(w, h * 0.88);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // Combo display — fun and bouncy
     if (this.combo > 1) {
-      const comboScale = Math.min(1.3, 1 + (this.combo - 1) * 0.02);
-      const comboPulse = Math.sin(t * 5) * 0.1 + 0.9;
+      const comboScale = Math.min(1.4, 1 + (this.combo - 1) * 0.03);
+      const comboPulse = Math.sin(t * 4) * 0.08 + 0.92;
       drawText(ctx, `COMBO x${this.combo}`, w / 2, h * 0.12,
-        (18 * comboScale * comboPulse) * scale, COLORS.gold);
+        (20 * comboScale * comboPulse) * scale, COLORS.gold);
     }
 
-    // Accuracy
+    // Accuracy display
     const accuracy = this.totalNotes > 0 ? Math.floor((this.hitNotes / this.totalNotes) * 100) : 100;
-    drawText(ctx, `${accuracy}%`, w - 25 * scale, h * 0.12, 10 * scale, '#aaa');
+    drawText(ctx, `${accuracy}%`, w - 30 * scale, h * 0.06, 10 * scale, '#aaa');
 
     // HUD
     drawHealth(ctx, 10, 10, game.state.health, game.state.maxHealth, isElphaba);
     drawText(ctx, `Score: ${game.state.score}`, w / 2, 20, 12 * scale, COLORS.gold);
-    const timeLeft = Math.max(0, 60 - Math.floor(game.state.levelTime));
+    const timeLeft = Math.max(0, 45 - Math.floor(game.state.levelTime));
     drawText(ctx, `${timeLeft}s`, w - 30 * scale, 20, 11 * scale, '#aaa');
 
-    // Controls hint
-    if (game.state.levelTime < 5 && !game.state.actComplete) {
-      const alpha = Math.max(0, 1 - game.state.levelTime / 5);
+    // Controls hint — show longer for clarity
+    if (game.state.levelTime < 8 && !game.state.actComplete) {
+      const alpha = Math.max(0, 1 - game.state.levelTime / 8);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Tap columns as notes reach the line!', w / 2, h * 0.25, 14 * scale, '#fff');
+      drawText(ctx, 'Tap when notes reach the gold line!', w / 2, h * 0.22, 14 * scale, '#fff');
+
+      // Arrow indicators pointing at target zone
+      const arrowY = this.targetZoneY - 15 * scale;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillStyle = colColors[i];
+        ctx.globalAlpha = alpha * (0.5 + Math.sin(t * 4 + i) * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(this.columnX[i] - 8 * scale, arrowY - 10 * scale);
+        ctx.lineTo(this.columnX[i] + 8 * scale, arrowY - 10 * scale);
+        ctx.lineTo(this.columnX[i], arrowY);
+        ctx.closePath();
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
     }
 
     // Act complete overlay
-    if (game.state.actComplete) {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    if (game.state.actComplete && game.state.health > 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
       ctx.fillRect(0, 0, w, h);
-      drawText(ctx, 'Grand Finale Complete!', w / 2, h * 0.25, 26 * scale, COLORS.gold);
-      drawText(ctx, `Accuracy: ${accuracy}%`, w / 2, h * 0.35, 18 * scale,
-        accuracy >= 95 ? COLORS.gold : accuracy >= 80 ? COLORS.emeraldGlow : '#ddd');
-      drawText(ctx, `Max Combo: ${this.maxCombo}`, w / 2, h * 0.42, 16 * scale, COLORS.pinkGlow);
-      drawText(ctx, `Perfect Notes: ${this.perfectNotes}`, w / 2, h * 0.49, 14 * scale, '#ccc');
-      drawText(ctx, `Score: ${game.state.score}`, w / 2, h * 0.56, 20 * scale, '#fff');
+
+      // Decorative stars in background
+      for (let i = 0; i < 20; i++) {
+        const sx = (w * 0.1) + (i * w * 0.04) % (w * 0.8);
+        const sy = h * 0.15 + ((i * 37) % 7) * h * 0.08;
+        ctx.fillStyle = COLORS.gold;
+        ctx.globalAlpha = 0.15 + Math.sin(t * 2 + i) * 0.1;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      drawText(ctx, 'Grand Finale Complete!', w / 2, h * 0.22, 24 * scale, COLORS.gold);
+      drawText(ctx, 'You were amazing, Havi!', w / 2, h * 0.30, 14 * scale, COLORS.pinkGlow);
+
+      drawText(ctx, `Accuracy: ${accuracy}%`, w / 2, h * 0.40, 18 * scale,
+        accuracy >= 80 ? COLORS.gold : accuracy >= 65 ? COLORS.emeraldGlow : '#ddd');
+      drawText(ctx, `Max Combo: ${this.maxCombo}`, w / 2, h * 0.47, 15 * scale, COLORS.pinkGlow);
+      drawText(ctx, `Perfect Hits: ${this.perfectNotes}`, w / 2, h * 0.53, 13 * scale, '#ccc');
+      drawText(ctx, `Score: ${game.state.score}`, w / 2, h * 0.60, 20 * scale, '#fff');
 
       const stars = game.state.stars.act9;
       for (let i = 0; i < 3; i++) {
@@ -428,13 +612,22 @@ export class Act9Scene implements Scene {
           const r = si % 2 === 0 ? 15 * scale : 7 * scale;
           const angle = (si * Math.PI) / 5 - Math.PI / 2;
           const sx = w / 2 - 40 * scale + i * 40 * scale + Math.cos(angle) * r;
-          const sy = h * 0.66 + Math.sin(angle) * r;
+          const sy = h * 0.70 + Math.sin(angle) * r;
           if (si === 0) ctx.moveTo(sx, sy);
           else ctx.lineTo(sx, sy);
         }
         ctx.closePath();
         ctx.fill();
       }
+    }
+
+    // Fail overlay
+    if (game.state.actComplete && game.state.health <= 0) {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, w, h);
+      drawText(ctx, 'Keep Practicing!', w / 2, h * 0.35, 22 * scale, COLORS.pinkGlow);
+      drawText(ctx, 'You can do it, Havi!', w / 2, h * 0.45, 16 * scale, '#ddd');
+      drawText(ctx, `Score: ${game.state.score}`, w / 2, h * 0.55, 18 * scale, COLORS.gold);
     }
   }
 }
