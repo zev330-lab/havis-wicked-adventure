@@ -114,8 +114,8 @@ export class InputManager {
   }
 
   private handleOrientation(e: DeviceOrientationEvent) {
-    if (e.gamma !== null) this.state.tiltX = e.gamma / 45; // -1 to 1
-    if (e.beta !== null) this.state.tiltY = (e.beta - 45) / 45; // centered around 45 degrees
+    if (e.gamma !== null) this.state.tiltX = Math.max(-1, Math.min(1, e.gamma / 45));
+    if (e.beta !== null) this.state.tiltY = Math.max(-1, Math.min(1, (e.beta - 45) / 45));
   }
 
   update() {

@@ -96,13 +96,13 @@ export class StoryCardScene implements Scene {
       if (this.lineTimers.length <= i) {
         this.lineTimers.push(0);
       }
-      if (this.timer > 1.0 + i * 0.4) {
+      if (this.timer > 1.0 + i * 0.8) {
         this.lineTimers[i] += dt;
       }
     }
 
-    // Ready to proceed after all lines shown
-    if (this.timer > 1.0 + totalLines * 0.4 + 1.5) {
+    // Ready to proceed after all lines shown — give time to read
+    if (this.timer > 1.0 + totalLines * 0.8 + 2.0) {
       this.ready = true;
     }
 
@@ -193,7 +193,7 @@ export class StoryCardScene implements Scene {
 
     for (let i = 0; i < card.lines.length; i++) {
       if (i >= this.lineTimers.length) break;
-      const lineFade = Math.min(1, this.lineTimers[i] * 3);
+      const lineFade = Math.min(1, this.lineTimers[i] * 1.5);
       if (lineFade <= 0) continue;
 
       ctx.globalAlpha = lineFade;

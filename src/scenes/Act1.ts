@@ -76,8 +76,8 @@ export class Act1Scene implements Scene {
     this.trailTimer += dt;
     this.noteTimer += dt;
 
-    // Gradually increase speed
-    this.scrollSpeed = 120 + game.state.levelTime * 3;
+    // Gradually increase speed — capped so it stays playable for a child
+    this.scrollSpeed = Math.min(200, 120 + game.state.levelTime * 1.5);
     // City gets closer
     this.cityDistance = Math.max(0.3, 1 - game.state.levelTime / 90);
 
@@ -150,8 +150,9 @@ export class Act1Scene implements Scene {
       game.spawnParticles(particlePresets.musicalNote(Math.random() * w, h * 0.2));
     }
 
-    // Spawn objects
-    if (this.spawnTimer > 0.6) {
+    // Spawn objects — slower spawn rate early, slightly faster later
+    const spawnInterval = Math.max(0.5, 0.9 - game.state.levelTime * 0.005);
+    if (this.spawnTimer > spawnInterval) {
       this.spawnTimer = 0;
       const lane = Math.random() * (h - 120) + 60;
 
@@ -198,7 +199,7 @@ export class Act1Scene implements Scene {
       const dx = obj.x - this.playerX;
       const dy = obj.y - this.playerY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const hitDist = obj.type === 'obstacle' ? 25 : 22;
+      const hitDist = obj.type === 'obstacle' ? 28 : 25;
 
       if (dist < hitDist) {
         if (obj.type === 'gem') {

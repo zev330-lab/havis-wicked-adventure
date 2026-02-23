@@ -55,19 +55,19 @@ export class CharacterSelectScene implements Scene {
       }
     }
 
-    // Keyboard selection
-    if (game.input.left || (game.input.actionPressed && !game.input.right)) {
+    // Keyboard selection — use actionPressed (single-frame) to pick
+    if (game.input.actionPressed) {
       if (!this.selected) {
-        this.selected = 'elphaba';
-        game.playSound('elphabaMagic');
-        game.spawnParticles(particlePresets.greenMagic(game.width * 0.28, game.height * 0.45));
-      }
-    }
-    if (game.input.right) {
-      if (!this.selected) {
-        this.selected = 'glinda';
-        game.playSound('glindaMagic');
-        game.spawnParticles(particlePresets.pinkMagic(game.width * 0.72, game.height * 0.45));
+        if (game.input.right) {
+          this.selected = 'glinda';
+          game.playSound('glindaMagic');
+          game.spawnParticles(particlePresets.pinkMagic(game.width * 0.72, game.height * 0.45));
+        } else {
+          // Default to Elphaba on Enter/action without a direction, or with left
+          this.selected = 'elphaba';
+          game.playSound('elphabaMagic');
+          game.spawnParticles(particlePresets.greenMagic(game.width * 0.28, game.height * 0.45));
+        }
       }
     }
   }

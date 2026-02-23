@@ -148,15 +148,20 @@ export class Act3Scene implements Scene {
         : particlePresets.pinkMagic(this.playerX, this.playerY);
       game.spawnParticles(preset);
 
-      // Check for nearby projectiles to reflect
+      // Check for nearby projectiles to reflect — generous zone for a child
       for (const proj of this.projectiles) {
         if (!proj.active || proj.reflected) continue;
         const dx = proj.x - this.playerX;
         const dy = proj.y - this.playerY;
-        if (Math.sqrt(dx * dx + dy * dy) < 60) {
+        if (Math.sqrt(dx * dx + dy * dy) < 100) {
           proj.reflected = true;
-          proj.vx = -proj.vx * 1.5;
-          proj.vy = (this.bossY - proj.y) * 0.5;
+          // Aim reflected projectile directly toward the boss center
+          const toBossX = this.bossX - proj.x;
+          const toBossY = this.bossY - proj.y;
+          const toBossDist = Math.sqrt(toBossX * toBossX + toBossY * toBossY) || 1;
+          const reflectSpeed = 250;
+          proj.vx = (toBossX / toBossDist) * reflectSpeed;
+          proj.vy = (toBossY / toBossDist) * reflectSpeed;
           game.playSound('sparkle');
         }
       }
@@ -426,7 +431,7 @@ export class Act3Scene implements Scene {
       ctx.lineWidth = 1.5;
       ctx.setLineDash([4, 4]);
       ctx.beginPath();
-      ctx.arc(this.playerX, this.playerY, 60, 0, Math.PI * 2);
+      ctx.arc(this.playerX, this.playerY, 100, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
     }

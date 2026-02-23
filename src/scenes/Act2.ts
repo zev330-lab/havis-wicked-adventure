@@ -11,7 +11,7 @@ import { startBgMusic, stopBgMusic } from '../engine/audio';
 interface Platform {
   x: number; y: number; w: number; h: number;
   type: string; moving?: boolean;
-  moveDir?: number; moveRange?: number; origX?: number; origY?: number;
+  moveTimer?: number; moveRange?: number; origX?: number; origY?: number;
 }
 
 interface Gem {
@@ -42,10 +42,13 @@ export class Act2Scene implements Scene {
   private onGround = false;
   private jumpHeld = false;
   private jumpTimer = 0;
+  private jumpCooldown = 0;
   private cameraX = 0;
   private cameraY = 0;
   private facing = 1;
   private invincibleTimer = 0;
+  private lastSafeX = 60;
+  private lastSafeY = 0;
 
   private platforms: Platform[] = [];
   private gems: Gem[] = [];
@@ -58,8 +61,8 @@ export class Act2Scene implements Scene {
   private levelHeight = 800;
   private gravity = 800;
   private moveSpeed = 180;
-  private jumpForce = -350;
-  private maxJumpTime = 0.25;
+  private jumpForce = -380;
+  private maxJumpTime = 0.22;
 
   private trailTimer = 0;
   private noteTimer = 0;
@@ -74,6 +77,7 @@ export class Act2Scene implements Scene {
     this.onGround = false;
     this.jumpHeld = false;
     this.jumpTimer = 0;
+    this.jumpCooldown = 0;
     this.invincibleTimer = 0;
     this.trailTimer = 0;
     this.noteTimer = 0;
@@ -89,6 +93,8 @@ export class Act2Scene implements Scene {
     this.buildLevel();
     this.playerX = 60;
     this.playerY = this.levelHeight - 100;
+    this.lastSafeX = 60;
+    this.lastSafeY = this.levelHeight - 100;
     this.cameraX = 0;
     this.cameraY = 0;
 
@@ -103,55 +109,53 @@ export class Act2Scene implements Scene {
     const lh = this.levelHeight;
     const groundY = lh - 30;
 
-    // Ground platforms
     this.platforms = [
-      // Ground sections
-      { x: 0, y: groundY, w: 400, h: 30, type: 'emerald' },
-      { x: 500, y: groundY, w: 250, h: 30, type: 'default' },
-      { x: 850, y: groundY, w: 200, h: 30, type: 'emerald' },
-      { x: 1200, y: groundY, w: 300, h: 30, type: 'default' },
-      { x: 1650, y: groundY, w: 200, h: 30, type: 'emerald' },
-      { x: 2000, y: groundY, w: 250, h: 30, type: 'default' },
-      { x: 2400, y: groundY, w: 300, h: 30, type: 'emerald' },
-      { x: 2850, y: groundY, w: 500, h: 30, type: 'gold' },
+      // Ground sections — connected with smaller gaps for a child
+      { x: 0, y: groundY, w: 500, h: 30, type: 'emerald' },
+      { x: 550, y: groundY, w: 350, h: 30, type: 'default' },
+      { x: 950, y: groundY, w: 350, h: 30, type: 'emerald' },
+      { x: 1350, y: groundY, w: 400, h: 30, type: 'default' },
+      { x: 1800, y: groundY, w: 300, h: 30, type: 'emerald' },
+      { x: 2150, y: groundY, w: 350, h: 30, type: 'default' },
+      { x: 2550, y: groundY, w: 300, h: 30, type: 'emerald' },
+      { x: 2900, y: groundY, w: 500, h: 30, type: 'gold' },
 
       // Elevated platforms — rooftops & bridges
-      { x: 200, y: groundY - 80, w: 100, h: 15, type: 'emerald' },
-      { x: 350, y: groundY - 150, w: 80, h: 15, type: 'default' },
-      { x: 550, y: groundY - 100, w: 120, h: 15, type: 'emerald' },
-      { x: 750, y: groundY - 180, w: 100, h: 15, type: 'gold' },
-      { x: 950, y: groundY - 120, w: 150, h: 15, type: 'default' },
-      { x: 1100, y: groundY - 200, w: 80, h: 15, type: 'emerald' },
-      { x: 1300, y: groundY - 80, w: 120, h: 15, type: 'default' },
-      { x: 1450, y: groundY - 160, w: 100, h: 15, type: 'emerald' },
-      { x: 1600, y: groundY - 240, w: 80, h: 15, type: 'gold' },
+      { x: 200, y: groundY - 70, w: 120, h: 18, type: 'emerald' },
+      { x: 400, y: groundY - 130, w: 100, h: 18, type: 'default' },
+      { x: 620, y: groundY - 90, w: 130, h: 18, type: 'emerald' },
+      { x: 850, y: groundY - 150, w: 110, h: 18, type: 'gold' },
+      { x: 1050, y: groundY - 100, w: 150, h: 18, type: 'default' },
+      { x: 1250, y: groundY - 170, w: 100, h: 18, type: 'emerald' },
+      { x: 1450, y: groundY - 80, w: 130, h: 18, type: 'default' },
+      { x: 1650, y: groundY - 140, w: 110, h: 18, type: 'emerald' },
+      { x: 1850, y: groundY - 200, w: 100, h: 18, type: 'gold' },
 
-      // High platforms
-      { x: 1800, y: groundY - 140, w: 100, h: 15, type: 'emerald' },
-      { x: 1950, y: groundY - 200, w: 80, h: 15, type: 'default' },
-      { x: 2150, y: groundY - 100, w: 120, h: 15, type: 'emerald' },
-      { x: 2350, y: groundY - 180, w: 100, h: 15, type: 'gold' },
-      { x: 2550, y: groundY - 130, w: 80, h: 15, type: 'default' },
-      { x: 2700, y: groundY - 220, w: 100, h: 15, type: 'emerald' },
-      { x: 2900, y: groundY - 100, w: 150, h: 15, type: 'gold' },
+      // Higher platforms
+      { x: 2050, y: groundY - 120, w: 110, h: 18, type: 'emerald' },
+      { x: 2250, y: groundY - 170, w: 100, h: 18, type: 'default' },
+      { x: 2450, y: groundY - 90, w: 130, h: 18, type: 'emerald' },
+      { x: 2650, y: groundY - 150, w: 110, h: 18, type: 'gold' },
+      { x: 2850, y: groundY - 100, w: 130, h: 18, type: 'default' },
+      { x: 3050, y: groundY - 80, w: 150, h: 18, type: 'gold' },
 
-      // Moving platforms
-      { x: 430, y: groundY - 60, w: 70, h: 15, type: 'gold', moving: true, moveDir: 0, moveRange: 80, origX: 430, origY: groundY - 60 },
-      { x: 1550, y: groundY - 100, w: 70, h: 15, type: 'gold', moving: true, moveDir: 0, moveRange: 120, origX: 1550, origY: groundY - 100 },
+      // Moving platforms — use moveTimer (starts at 0, increments by dt)
+      { x: 500, y: groundY - 50, w: 80, h: 18, type: 'gold', moving: true, moveTimer: 0, moveRange: 60, origX: 500, origY: groundY - 50 },
+      { x: 1750, y: groundY - 90, w: 80, h: 18, type: 'gold', moving: true, moveTimer: 0, moveRange: 80, origX: 1750, origY: groundY - 90 },
     ];
 
     // Gems scattered along the level
     this.gems = [];
     this.totalGems = 0;
     const gemPositions = [
-      [150, groundY - 30], [250, groundY - 110], [400, groundY - 180],
-      [580, groundY - 130], [700, groundY - 30], [780, groundY - 210],
-      [980, groundY - 150], [1130, groundY - 230], [1250, groundY - 30],
-      [1350, groundY - 110], [1480, groundY - 190], [1630, groundY - 270],
-      [1750, groundY - 30], [1830, groundY - 170], [1980, groundY - 230],
-      [2100, groundY - 30], [2200, groundY - 130], [2380, groundY - 210],
-      [2500, groundY - 30], [2580, groundY - 160], [2730, groundY - 250],
-      [2950, groundY - 130], [3050, groundY - 30], [3150, groundY - 70],
+      [150, groundY - 30], [300, groundY - 100], [450, groundY - 160],
+      [650, groundY - 120], [800, groundY - 30], [900, groundY - 180],
+      [1080, groundY - 130], [1280, groundY - 200], [1400, groundY - 30],
+      [1500, groundY - 110], [1680, groundY - 170], [1880, groundY - 230],
+      [1950, groundY - 30], [2080, groundY - 150], [2280, groundY - 200],
+      [2400, groundY - 30], [2500, groundY - 120], [2680, groundY - 180],
+      [2800, groundY - 30], [2950, groundY - 130], [3080, groundY - 110],
+      [3200, groundY - 30],
     ];
     for (const [gx, gy] of gemPositions) {
       this.gems.push({ x: gx, y: gy, collected: false, type: 'gem' });
@@ -162,27 +166,27 @@ export class Act2Scene implements Scene {
     this.npcs = [
       { x: 300, y: groundY - 20, message: 'Go Havi!', talked: false },
       { x: 900, y: groundY - 20, message: "You're wonderful!", talked: false },
-      { x: 1400, y: groundY - 20, message: 'You can do it!', talked: false },
-      { x: 2100, y: groundY - 20, message: 'Almost there!', talked: false },
-      { x: 2800, y: groundY - 20, message: 'Havi is amazing!', talked: false },
+      { x: 1500, y: groundY - 20, message: 'You can do it!', talked: false },
+      { x: 2200, y: groundY - 20, message: 'Almost there!', talked: false },
+      { x: 3000, y: groundY - 20, message: 'Havi is amazing!', talked: false },
     ];
 
     // Switches and gates
     this.switches = [
-      { x: 850, y: groundY - 50, activated: false, gateIndex: 0 },
-      { x: 2000, y: groundY - 50, activated: false, gateIndex: 1 },
+      { x: 950, y: groundY - 50, activated: false, gateIndex: 0 },
+      { x: 2200, y: groundY - 50, activated: false, gateIndex: 1 },
     ];
 
     this.gates = [
-      { x: 1050, y: groundY - 120, w: 20, h: 120, open: false, openAmount: 0 },
-      { x: 2250, y: groundY - 120, w: 20, h: 120, open: false, openAmount: 0 },
+      { x: 1300, y: groundY - 120, w: 20, h: 120, open: false, openAmount: 0 },
+      { x: 2500, y: groundY - 120, w: 20, h: 120, open: false, openAmount: 0 },
     ];
 
     // Power-ups
     this.powerups = [
-      { x: 750, y: groundY - 220, type: 'shield', collected: false },
-      { x: 1600, y: groundY - 280, type: 'speed', collected: false },
-      { x: 2700, y: groundY - 260, type: 'fly', collected: false },
+      { x: 850, y: groundY - 190, type: 'shield', collected: false },
+      { x: 1850, y: groundY - 240, type: 'speed', collected: false },
+      { x: 2850, y: groundY - 140, type: 'fly', collected: false },
     ];
 
     this.goalX = 3300;
@@ -197,30 +201,25 @@ export class Act2Scene implements Scene {
     if (this.shieldTimer > 0) this.shieldTimer -= dt;
     if (this.speedTimer > 0) this.speedTimer -= dt;
     if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
+    if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
 
     const isElphaba = game.state.character === 'elphaba';
     const speed = this.speedTimer > 0 ? this.moveSpeed * 1.5 : this.moveSpeed;
 
-    // Horizontal movement — touch follows finger X position
+    // --- MOVEMENT ---
     this.playerVX = 0;
+
     if (game.input.isTouching) {
-      // Convert screen touch to world X
+      // Convert screen touch to world X and move toward it
       const worldTouchX = game.input.touchX + this.cameraX;
       const dx = worldTouchX - this.playerX;
-      if (Math.abs(dx) > 10) {
-        this.playerVX = dx > 0 ? speed : -speed;
+      if (Math.abs(dx) > 15) {
+        this.playerVX = Math.sign(dx) * speed;
         this.facing = dx > 0 ? 1 : -1;
       }
-      // Jump when touching upper portion of screen
-      const touchYRatio = game.input.touchY / game.height;
-      if (touchYRatio < 0.4 && this.onGround) {
-        this.playerVY = this.jumpForce;
-        this.jumpHeld = true;
-        this.jumpTimer = 0;
-        this.onGround = false;
-        game.playSound('jump');
-      }
     }
+
+    // Keyboard overrides
     if (game.input.left) {
       this.playerVX = -speed;
       this.facing = -1;
@@ -230,29 +229,32 @@ export class Act2Scene implements Scene {
       this.facing = 1;
     }
 
-    // Jump — variable height (keyboard)
-    const wantJump = game.input.jump || game.input.up;
+    // --- JUMP ---
+    // Tap upper 40% of screen to jump (with cooldown to prevent spamming)
+    const touchJump = game.input.isTouching && (game.input.touchY / game.height) < 0.35;
+    const keyJump = game.input.jumpPressed;
 
-    if (game.input.jumpPressed && !game.input.isTouching) {
-      if (this.onGround) {
-        this.playerVY = this.jumpForce;
-        this.jumpHeld = true;
-        this.jumpTimer = 0;
-        this.onGround = false;
-        game.playSound('jump');
-      }
+    if ((touchJump || keyJump) && this.onGround && this.jumpCooldown <= 0) {
+      this.playerVY = this.jumpForce;
+      this.jumpHeld = true;
+      this.jumpTimer = 0;
+      this.onGround = false;
+      this.jumpCooldown = 0.3; // Prevent re-jump for 300ms
+      game.playSound('jump');
     }
 
-    if (this.jumpHeld && wantJump && this.jumpTimer < this.maxJumpTime) {
+    // Variable jump height — hold touch/key for higher jump
+    const holdingJump = game.input.jump || game.input.up || touchJump;
+    if (this.jumpHeld && holdingJump && this.jumpTimer < this.maxJumpTime) {
       this.jumpTimer += dt;
-      this.playerVY = this.jumpForce * (1 - this.jumpTimer / this.maxJumpTime * 0.5);
     } else {
       this.jumpHeld = false;
     }
 
-    // Gravity
-    this.playerVY += this.gravity * dt;
-    if (this.playerVY > 600) this.playerVY = 600;
+    // Gravity (reduced while holding jump for variable height)
+    const gravityMult = (this.jumpHeld && this.playerVY < 0) ? 0.5 : 1;
+    this.playerVY += this.gravity * gravityMult * dt;
+    if (this.playerVY > 500) this.playerVY = 500;
 
     // Move player
     this.playerX += this.playerVX * dt;
@@ -260,69 +262,108 @@ export class Act2Scene implements Scene {
 
     // Update moving platforms
     for (const plat of this.platforms) {
-      if (plat.moving && plat.origY !== undefined && plat.origX !== undefined) {
-        plat.moveDir = (plat.moveDir || 0) + dt;
-        plat.y = plat.origY + Math.sin(plat.moveDir * 1.5) * (plat.moveRange || 50);
+      if (plat.moving && plat.origY !== undefined) {
+        plat.moveTimer = (plat.moveTimer || 0) + dt;
+        // Full oscillation in ~3 seconds (2*PI / 2.0 ≈ 3.14s)
+        plat.y = plat.origY + Math.sin(plat.moveTimer * 2.0) * (plat.moveRange || 50);
       }
     }
 
-    // Platform collision
+    // --- PLATFORM COLLISION ---
     this.onGround = false;
+    const pw = 12; // player half-width
+    const pFeet = 18; // feet offset from center
+    const pHead = 28; // head offset from center
+
     for (const plat of this.platforms) {
-      if (this.playerX + 12 > plat.x && this.playerX - 12 < plat.x + plat.w) {
-        // Land on top
-        if (this.playerVY >= 0 && this.playerY + 20 > plat.y && this.playerY + 20 < plat.y + plat.h + 10 && this.playerY < plat.y) {
-          this.playerY = plat.y - 20;
+      // Check horizontal overlap
+      if (this.playerX + pw > plat.x && this.playerX - pw < plat.x + plat.w) {
+        // Landing on top of platform
+        const prevFeetY = this.playerY + pFeet - this.playerVY * dt;
+        if (this.playerVY >= 0 &&
+            this.playerY + pFeet >= plat.y &&
+            prevFeetY <= plat.y + 6) {
+          this.playerY = plat.y - pFeet;
           this.playerVY = 0;
           this.onGround = true;
+          // Record safe position
+          this.lastSafeX = this.playerX;
+          this.lastSafeY = this.playerY;
         }
-        // Hit bottom
-        else if (this.playerVY < 0 && this.playerY - 30 < plat.y + plat.h && this.playerY - 30 > plat.y - 5) {
+        // Hit head on bottom of platform
+        else if (this.playerVY < 0 &&
+                 this.playerY - pHead < plat.y + plat.h &&
+                 this.playerY - pHead > plat.y - 8) {
+          this.playerY = plat.y + plat.h + pHead;
           this.playerVY = 0;
+        }
+      }
+
+      // Side collision (for thick ground platforms)
+      if (plat.h >= 25 &&
+          this.playerY + pFeet > plat.y + 4 &&
+          this.playerY - pHead < plat.y + plat.h) {
+        // Hitting right side of player against left side of platform
+        if (this.playerVX > 0 &&
+            this.playerX + pw > plat.x &&
+            this.playerX + pw < plat.x + 8) {
+          this.playerX = plat.x - pw;
+        }
+        // Hitting left side of player against right side of platform
+        if (this.playerVX < 0 &&
+            this.playerX - pw < plat.x + plat.w &&
+            this.playerX - pw > plat.x + plat.w - 8) {
+          this.playerX = plat.x + plat.w + pw;
         }
       }
     }
 
-    // Gate collision
+    // --- GATE COLLISION ---
     for (const gate of this.gates) {
       if (gate.open) {
         gate.openAmount = Math.min(1, gate.openAmount + dt * 2);
-        continue;
       }
-      if (this.playerX + 12 > gate.x && this.playerX - 12 < gate.x + gate.w &&
-          this.playerY + 20 > gate.y && this.playerY - 30 < gate.y + gate.h) {
-        // Block player
-        if (this.playerVX > 0) this.playerX = gate.x - 12;
-        else if (this.playerVX < 0) this.playerX = gate.x + gate.w + 12;
+      // Only block if gate is not fully open
+      if (gate.openAmount >= 1) continue;
+
+      const effectiveH = gate.h * (1 - gate.openAmount);
+      const effectiveY = gate.y + gate.h - effectiveH;
+
+      if (this.playerX + pw > gate.x && this.playerX - pw < gate.x + gate.w &&
+          this.playerY + pFeet > effectiveY && this.playerY - pHead < effectiveY + effectiveH) {
+        if (this.playerVX > 0) this.playerX = gate.x - pw;
+        else if (this.playerVX < 0) this.playerX = gate.x + gate.w + pw;
       }
     }
 
-    // Fall death
+    // --- FALL RECOVERY ---
     if (this.playerY > this.levelHeight + 50) {
       game.state.health--;
       game.state.noHitBonus = false;
       game.playSound('hit');
+      game.shakeCamera(8, 0.3);
       if (game.state.health <= 0) {
         game.state.health = 3;
         this.enter(game);
         return;
       }
-      // Respawn at last safe position
-      this.playerX = Math.max(60, this.playerX - 200);
-      this.playerY = this.levelHeight - 120;
+      // Respawn at last safe ground position
+      this.playerX = this.lastSafeX;
+      this.playerY = this.lastSafeY - 10;
       this.playerVY = 0;
-      this.invincibleTimer = 1.5;
+      this.playerVX = 0;
+      this.invincibleTimer = 2.0;
     }
 
-    // Clamp
+    // Clamp to level bounds
     this.playerX = Math.max(15, Math.min(this.levelWidth, this.playerX));
 
-    // Collect gems
+    // --- COLLECTIBLES ---
     for (const gem of this.gems) {
       if (gem.collected) continue;
       const dx = gem.x - this.playerX;
       const dy = gem.y - this.playerY;
-      if (Math.sqrt(dx * dx + dy * dy) < 25) {
+      if (dx * dx + dy * dy < 30 * 30) {
         gem.collected = true;
         game.state.gems++;
         game.state.score += 100;
@@ -336,7 +377,7 @@ export class Act2Scene implements Scene {
       if (sw.activated) continue;
       const dx = sw.x - this.playerX;
       const dy = sw.y - this.playerY;
-      if (Math.sqrt(dx * dx + dy * dy) < 30) {
+      if (dx * dx + dy * dy < 35 * 35) {
         sw.activated = true;
         this.gates[sw.gateIndex].open = true;
         game.playSound('switchActivate');
@@ -349,15 +390,16 @@ export class Act2Scene implements Scene {
       if (pu.collected) continue;
       const dx = pu.x - this.playerX;
       const dy = pu.y - this.playerY;
-      if (Math.sqrt(dx * dx + dy * dy) < 25) {
+      if (dx * dx + dy * dy < 28 * 28) {
         pu.collected = true;
         game.playSound('powerUp');
         if (pu.type === 'shield') {
           this.shieldTimer = 8;
+          this.invincibleTimer = 8;
         } else if (pu.type === 'speed') {
           this.speedTimer = 8;
         } else if (pu.type === 'fly') {
-          this.playerVY = -500;
+          this.playerVY = -450;
           this.jumpHeld = false;
         }
         game.spawnParticles(particlePresets.gemCollect(pu.x - this.cameraX, pu.y - this.cameraY, !isElphaba));
@@ -380,11 +422,11 @@ export class Act2Scene implements Scene {
       game.spawnParticles(particlePresets.musicalNote(Math.random() * game.width, game.height * 0.1));
     }
 
-    // Camera follow
+    // --- CAMERA ---
     const targetCX = this.playerX - game.width * 0.35;
-    const targetCY = this.playerY - game.height * 0.5;
-    this.cameraX += (targetCX - this.cameraX) * Math.min(1, dt * 4);
-    this.cameraY += (targetCY - this.cameraY) * Math.min(1, dt * 4);
+    const targetCY = this.playerY - game.height * 0.55;
+    this.cameraX += (targetCX - this.cameraX) * Math.min(1, dt * 5);
+    this.cameraY += (targetCY - this.cameraY) * Math.min(1, dt * 3);
     this.cameraX = Math.max(0, Math.min(this.levelWidth - game.width, this.cameraX));
     this.cameraY = Math.max(0, Math.min(this.levelHeight - game.height, this.cameraY));
 
@@ -449,12 +491,11 @@ export class Act2Scene implements Scene {
 
     // Distant Emerald City
     ctx.globalAlpha = 0.4;
-    const cityParallax = cx * 0.1;
-    drawEmeraldCity(ctx, w * 0.7 - cityParallax, h * 0.5, scale * 0.8, game.time);
+    drawEmeraldCity(ctx, w * 0.7 - cx * 0.1, h * 0.5, scale * 0.8, game.time);
     ctx.globalAlpha = 1;
 
     // Buildings background (parallax)
-    this.drawBuildingsBackground(ctx, w, h, cx, scale, game.time);
+    this.drawBuildingsBackground(ctx, w, h, cx, game.time);
 
     ctx.save();
     ctx.translate(-cx, -cy);
@@ -479,14 +520,12 @@ export class Act2Scene implements Scene {
     for (const sw of this.switches) {
       ctx.fillStyle = sw.activated ? COLORS.emeraldGlow : '#666';
       ctx.fillRect(sw.x - 8, sw.y, 16, 20);
-      // Lever
       ctx.strokeStyle = sw.activated ? COLORS.gold : '#888';
       ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(sw.x, sw.y);
       ctx.lineTo(sw.x + (sw.activated ? 8 : -8), sw.y - 12);
       ctx.stroke();
-      // Base
       ctx.fillStyle = '#444';
       ctx.fillRect(sw.x - 10, sw.y + 16, 20, 6);
     }
@@ -506,12 +545,11 @@ export class Act2Scene implements Scene {
     // NPCs
     for (const npc of this.npcs) {
       const dist = Math.abs(npc.x - this.playerX);
-      const showMessage = dist < 100;
-      drawNPC(ctx, npc.x, npc.y, scale * 1.2, game.time, showMessage ? npc.message : '');
+      drawNPC(ctx, npc.x, npc.y, scale * 1.2, game.time, dist < 120 ? npc.message : '');
     }
 
     // Player
-    const blink = this.invincibleTimer > 0 && Math.sin(this.invincibleTimer * 20) > 0;
+    const blink = this.invincibleTimer > 0 && Math.sin(this.invincibleTimer * 15) > 0;
     if (!blink) {
       ctx.save();
       if (this.facing < 0) {
@@ -551,7 +589,7 @@ export class Act2Scene implements Scene {
     // HUD
     drawHUD(ctx, game);
 
-    // Speed boost indicator
+    // Power-up indicators
     if (this.speedTimer > 0) {
       drawText(ctx, 'SPEED BOOST!', w / 2, 70, 12 * scale, COLORS.gold);
     }
@@ -585,16 +623,16 @@ export class Act2Scene implements Scene {
     }
 
     // Controls hint
-    if (game.state.levelTime < 4) {
-      const alpha = Math.max(0, 1 - game.state.levelTime / 4);
+    if (game.state.levelTime < 5) {
+      const alpha = Math.max(0, 1 - game.state.levelTime / 5);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Touch to move toward finger', w / 2, h * 0.85, 13 * scale, '#fff');
-      drawText(ctx, 'Touch top of screen to jump', w / 2, h * 0.9, 12 * scale, '#ccc');
+      drawText(ctx, 'Drag to move!', w / 2, h * 0.83, 15 * scale, '#fff');
+      drawText(ctx, 'Touch top of screen to jump!', w / 2, h * 0.89, 13 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
   }
 
-  private drawBuildingsBackground(ctx: CanvasRenderingContext2D, w: number, h: number, camX: number, scale: number, time: number) {
+  private drawBuildingsBackground(ctx: CanvasRenderingContext2D, w: number, h: number, camX: number, time: number) {
     const parallax = camX * 0.3;
     ctx.fillStyle = 'rgba(0, 40, 20, 0.5)';
 
@@ -604,7 +642,6 @@ export class Act2Scene implements Scene {
       const by = h * 0.6 - bh;
       ctx.fillRect(bx, by, 50 + (i * 13) % 30, bh + h * 0.4);
 
-      // Windows
       ctx.fillStyle = `rgba(0, 255, 100, ${Math.sin(time + i) * 0.15 + 0.2})`;
       for (let wy = by + 10; wy < by + bh; wy += 20) {
         ctx.fillRect(bx + 8, wy, 6, 8);
@@ -618,32 +655,28 @@ export class Act2Scene implements Scene {
     const bob = Math.sin(time * 3 + x * 0.1) * 4;
     const glow = Math.sin(time * 4) * 0.2 + 0.8;
 
-    // Glow
     ctx.fillStyle = `rgba(255, 215, 0, ${glow * 0.25})`;
     ctx.beginPath();
     ctx.arc(x, y + bob, 20, 0, Math.PI * 2);
     ctx.fill();
 
-    // Book shape
     ctx.fillStyle = type === 'shield' ? '#4488ff' : type === 'speed' ? '#ff8844' : '#aa44ff';
     ctx.fillRect(x - 10, y + bob - 8, 20, 16);
-    // Pages
     ctx.fillStyle = '#fff';
     ctx.fillRect(x - 8, y + bob - 6, 16, 12);
-    // Spine
     ctx.fillStyle = type === 'shield' ? '#2266cc' : type === 'speed' ? '#cc6622' : '#8822cc';
     ctx.fillRect(x - 10, y + bob - 8, 4, 16);
 
-    // Label
+    // Simple text label instead of emoji
     ctx.fillStyle = '#333';
-    ctx.font = `${8 * scale}px Georgia, serif`;
+    ctx.font = `bold ${8 * scale}px Georgia, serif`;
     ctx.textAlign = 'center';
-    const label = type === 'shield' ? '🛡' : type === 'speed' ? '⚡' : '✨';
-    ctx.fillText(label, x + 2, y + bob + 4);
+    ctx.textBaseline = 'middle';
+    const label = type === 'shield' ? 'S' : type === 'speed' ? 'F' : 'M';
+    ctx.fillText(label, x + 2, y + bob);
   }
 
   private drawGoal(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number, time: number) {
-    // Golden archway
     ctx.strokeStyle = COLORS.gold;
     ctx.lineWidth = 4 * scale;
     ctx.beginPath();
@@ -653,7 +686,6 @@ export class Act2Scene implements Scene {
     ctx.lineTo(x - 30 * scale, y + 40 * scale);
     ctx.stroke();
 
-    // Star on top
     const bob = Math.sin(time * 3) * 3;
     ctx.fillStyle = COLORS.gold;
     ctx.beginPath();
@@ -668,9 +700,8 @@ export class Act2Scene implements Scene {
     ctx.closePath();
     ctx.fill();
 
-    // Glow
-    const glow = Math.sin(time * 2) * 0.2 + 0.5;
-    ctx.fillStyle = `rgba(255, 215, 0, ${glow * 0.2})`;
+    const glowA = Math.sin(time * 2) * 0.2 + 0.5;
+    ctx.fillStyle = `rgba(255, 215, 0, ${glowA * 0.2})`;
     ctx.beginPath();
     ctx.arc(x, y - 10 * scale, 40 * scale, 0, Math.PI * 2);
     ctx.fill();

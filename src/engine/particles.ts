@@ -4,8 +4,12 @@ import { Particle, ParticleEmitterConfig, Color } from './types';
 export class ParticleSystem {
   particles: Particle[] = [];
   private pool: Particle[] = [];
+  private maxActive = 300;
+  private maxPool = 200;
 
   private getParticle(): Particle {
+    // Cap pool size
+    if (this.pool.length > this.maxPool) this.pool.length = this.maxPool;
     return this.pool.pop() || {
       x: 0, y: 0, vx: 0, vy: 0,
       life: 0, maxLife: 1, size: 4, sizeEnd: 0,
@@ -18,6 +22,8 @@ export class ParticleSystem {
   emit(config: ParticleEmitterConfig) {
     const count = config.count;
     for (let i = 0; i < count; i++) {
+      // Cap active particles to prevent memory issues
+      if (this.particles.length >= this.maxActive) return;
       const p = this.getParticle();
       const angle = (config.angle ?? Math.random() * Math.PI * 2) +
         (Math.random() - 0.5) * (config.angleVariance ?? Math.PI * 2);

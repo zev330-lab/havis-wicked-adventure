@@ -52,6 +52,17 @@ export class VictoryScene implements Scene {
     }
   }
 
+  private drawHeart(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, color: string) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y + size * 0.3);
+    ctx.bezierCurveTo(x, y - size * 0.3, x - size, y - size * 0.3, x - size, y + size * 0.1);
+    ctx.bezierCurveTo(x - size, y + size * 0.6, x, y + size, x, y + size * 1.2);
+    ctx.bezierCurveTo(x, y + size, x + size, y + size * 0.6, x + size, y + size * 0.1);
+    ctx.bezierCurveTo(x + size, y - size * 0.3, x, y - size * 0.3, x, y + size * 0.3);
+    ctx.fill();
+  }
+
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {
     const w = game.width;
     const h = game.height;
@@ -152,8 +163,9 @@ export class VictoryScene implements Scene {
       const alpha = Math.min(1, (t - 4) * 0.5);
       ctx.globalAlpha = alpha;
 
-      // Hearts
-      drawText(ctx, '💚🩷', w / 2, h * 0.39, 24 * scale, '#fff');
+      // Hearts — drawn with canvas instead of emoji for reliability
+      this.drawHeart(ctx, w / 2 - 18 * scale, h * 0.39, 14 * scale, COLORS.emeraldGlow);
+      this.drawHeart(ctx, w / 2 + 18 * scale, h * 0.39, 14 * scale, COLORS.pinkGlow);
 
       // Total score
       const totalStars = Object.values(game.state.stars).reduce((a, b) => a + b, 0);
