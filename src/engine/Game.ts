@@ -38,7 +38,7 @@ function createInitialState(): GameState {
     levelTime: 0,
     noHitBonus: true,
     bossHealth: 10,
-    bossMaxHealth: 10,
+    bossMaxHealth: 6,
     actComplete: false,
     transitionAlpha: 0,
     transitionDirection: null,

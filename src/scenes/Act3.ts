@@ -17,6 +17,14 @@ interface Projectile {
   size: number;
 }
 
+interface MagicBlast {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  active: boolean;
+}
+
 interface BossPart {
   x: number;
   y: number;
@@ -34,8 +42,10 @@ export class Act3Scene implements Scene {
   private bossX = 0;
   private bossY = 0;
   private projectiles: Projectile[] = [];
+  private magicBlasts: MagicBlast[] = [];
   private bossParts: BossPart[] = [];
   private shootTimer = 0;
+  private blastCooldown = 0;
   private phase = 1;
   private invincibleTimer = 0;
   private trailTimer = 0;
@@ -50,7 +60,9 @@ export class Act3Scene implements Scene {
     this.bossX = game.width * 0.75;
     this.bossY = game.height * 0.35;
     this.projectiles = [];
+    this.magicBlasts = [];
     this.shootTimer = 0;
+    this.blastCooldown = 0;
     this.phase = 1;
     this.invincibleTimer = 0;
     this.trailTimer = 0;
@@ -60,7 +72,8 @@ export class Act3Scene implements Scene {
     this.cutscenePhase = 0;
 
     game.state.gems = 0;
-    game.state.health = 3;
+    game.state.health = 5;
+    game.state.maxHealth = 5;
     game.state.noHitBonus = true;
     game.state.levelTime = 0;
     game.state.actComplete = false;
@@ -80,16 +93,16 @@ export class Act3Scene implements Scene {
     const s = game.getScale();
 
     this.bossParts = [
-      // Main body
-      { x: bx - 40 * s, y: by - 30 * s, w: 80 * s, h: 100 * s, health: 3, type: 'body', destroyed: false, shakeTimer: 0 },
+      // Main body — bigger hitbox, less health
+      { x: bx - 45 * s, y: by - 35 * s, w: 90 * s, h: 110 * s, health: 2, type: 'body', destroyed: false, shakeTimer: 0 },
       // Top dome
-      { x: bx - 25 * s, y: by - 60 * s, w: 50 * s, h: 35 * s, health: 2, type: 'dome', destroyed: false, shakeTimer: 0 },
+      { x: bx - 30 * s, y: by - 65 * s, w: 60 * s, h: 40 * s, health: 1, type: 'dome', destroyed: false, shakeTimer: 0 },
       // Left arm
-      { x: bx - 70 * s, y: by - 10 * s, w: 35 * s, h: 20 * s, health: 2, type: 'arm_l', destroyed: false, shakeTimer: 0 },
+      { x: bx - 75 * s, y: by - 15 * s, w: 40 * s, h: 30 * s, health: 1, type: 'arm_l', destroyed: false, shakeTimer: 0 },
       // Right arm
-      { x: bx + 35 * s, y: by - 10 * s, w: 35 * s, h: 20 * s, health: 2, type: 'arm_r', destroyed: false, shakeTimer: 0 },
+      { x: bx + 35 * s, y: by - 15 * s, w: 40 * s, h: 30 * s, health: 1, type: 'arm_r', destroyed: false, shakeTimer: 0 },
       // Antenna
-      { x: bx - 5 * s, y: by - 80 * s, w: 10 * s, h: 25 * s, health: 1, type: 'antenna', destroyed: false, shakeTimer: 0 },
+      { x: bx - 8 * s, y: by - 85 * s, w: 16 * s, h: 30 * s, health: 1, type: 'antenna', destroyed: false, shakeTimer: 0 },
     ];
   }
 
@@ -137,33 +150,76 @@ export class Act3Scene implements Scene {
       this.playerX += game.input.tiltX * moveSpeed * dt;
     }
 
-    this.playerX = Math.max(25, Math.min(w * 0.55, this.playerX));
+    this.playerX = Math.max(25, Math.min(w * 0.65, this.playerX));
     this.playerY = Math.max(60, Math.min(h - 50, this.playerY));
 
-    // Magic blast to reflect projectiles
-    if (game.input.tap || game.input.actionPressed) {
+    // --- MAGIC BLAST: tap anywhere to shoot toward that spot ---
+    if (this.blastCooldown > 0) this.blastCooldown -= dt;
+
+    if (game.input.tap && this.blastCooldown <= 0) {
+      // Fire a magic blast from the player toward the tap position
+      const tapX = game.input.tapX;
+      const tapY = game.input.tapY;
+      const dx = tapX - this.playerX;
+      const dy = tapY - this.playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const blastSpeed = 400;
+
+      this.magicBlasts.push({
+        x: this.playerX,
+        y: this.playerY,
+        vx: (dx / dist) * blastSpeed,
+        vy: (dy / dist) * blastSpeed,
+        active: true,
+      });
+
+      this.blastCooldown = 0.25; // Can fire 4 times per second
       game.playSound('magicBlast');
+
       const preset = isElphaba
         ? particlePresets.greenMagic(this.playerX, this.playerY)
         : particlePresets.pinkMagic(this.playerX, this.playerY);
       game.spawnParticles(preset);
+    }
 
-      // Check for nearby projectiles to reflect — generous zone for a child
-      for (const proj of this.projectiles) {
-        if (!proj.active || proj.reflected) continue;
-        const dx = proj.x - this.playerX;
-        const dy = proj.y - this.playerY;
-        if (Math.sqrt(dx * dx + dy * dy) < 100) {
-          proj.reflected = true;
-          // Aim reflected projectile directly toward the boss center
-          const toBossX = this.bossX - proj.x;
-          const toBossY = this.bossY - proj.y;
-          const toBossDist = Math.sqrt(toBossX * toBossX + toBossY * toBossY) || 1;
-          const reflectSpeed = 250;
-          proj.vx = (toBossX / toBossDist) * reflectSpeed;
-          proj.vy = (toBossY / toBossDist) * reflectSpeed;
-          game.playSound('sparkle');
-        }
+    // Keyboard action also fires toward the boss
+    if (game.input.actionPressed && this.blastCooldown <= 0) {
+      const dx = this.bossX - this.playerX;
+      const dy = this.bossY - this.playerY;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const blastSpeed = 400;
+
+      this.magicBlasts.push({
+        x: this.playerX,
+        y: this.playerY,
+        vx: (dx / dist) * blastSpeed,
+        vy: (dy / dist) * blastSpeed,
+        active: true,
+      });
+
+      this.blastCooldown = 0.25;
+      game.playSound('magicBlast');
+
+      const preset = isElphaba
+        ? particlePresets.greenMagic(this.playerX, this.playerY)
+        : particlePresets.pinkMagic(this.playerX, this.playerY);
+      game.spawnParticles(preset);
+    }
+
+    // Auto-reflect nearby boss projectiles (no tap needed — just get close)
+    for (const proj of this.projectiles) {
+      if (!proj.active || proj.reflected) continue;
+      const dx = proj.x - this.playerX;
+      const dy = proj.y - this.playerY;
+      if (Math.sqrt(dx * dx + dy * dy) < 80) {
+        proj.reflected = true;
+        const toBossX = this.bossX - proj.x;
+        const toBossY = this.bossY - proj.y;
+        const toBossDist = Math.sqrt(toBossX * toBossX + toBossY * toBossY) || 1;
+        const reflectSpeed = 280;
+        proj.vx = (toBossX / toBossDist) * reflectSpeed;
+        proj.vy = (toBossY / toBossDist) * reflectSpeed;
+        game.playSound('sparkle');
       }
     }
 
@@ -179,8 +235,8 @@ export class Act3Scene implements Scene {
       game.spawnParticles(particlePresets.musicalNote(Math.random() * w, h * 0.2));
     }
 
-    // Boss shooting
-    const shootInterval = this.phase === 1 ? 1.2 : this.phase === 2 ? 0.8 : 0.5;
+    // Boss shooting — slower intervals, easier for a child
+    const shootInterval = this.phase === 1 ? 1.8 : this.phase === 2 ? 1.3 : 0.9;
     this.shootTimer += dt;
     if (this.shootTimer >= shootInterval) {
       this.shootTimer = 0;
@@ -216,10 +272,10 @@ export class Act3Scene implements Scene {
           game.state.noHitBonus = false;
           game.playSound('hit');
           game.shakeCamera(10, 0.3);
-          this.invincibleTimer = 1.5;
+          this.invincibleTimer = 2.5;
 
           if (game.state.health <= 0) {
-            game.state.health = 3;
+            game.state.health = 5;
             this.enter(game);
             return;
           }
@@ -279,17 +335,79 @@ export class Act3Scene implements Scene {
       }
     }
 
-    // Clean projectiles
+    // --- UPDATE MAGIC BLASTS ---
+    for (const blast of this.magicBlasts) {
+      if (!blast.active) continue;
+      blast.x += blast.vx * dt;
+      blast.y += blast.vy * dt;
+
+      // Off screen
+      if (blast.x < -20 || blast.x > w + 20 || blast.y < -20 || blast.y > h + 20) {
+        blast.active = false;
+        continue;
+      }
+
+      // Hit boss parts — generous collision for a child
+      for (const part of this.bossParts) {
+        if (part.destroyed) continue;
+        const hitMargin = 10; // extra pixels around each part
+        if (blast.x > part.x - hitMargin && blast.x < part.x + part.w + hitMargin &&
+            blast.y > part.y - hitMargin && blast.y < part.y + part.h + hitMargin) {
+          blast.active = false;
+          part.health--;
+          part.shakeTimer = 0.3;
+          game.state.bossHealth--;
+          game.state.score += 200;
+          game.playSound('bossHit');
+          game.shakeCamera(6, 0.2);
+          game.spawnParticles(particlePresets.explosion(blast.x, blast.y));
+
+          if (part.health <= 0) {
+            part.destroyed = true;
+            game.spawnParticles(particlePresets.explosion(part.x + part.w / 2, part.y + part.h / 2));
+            game.state.score += 500;
+
+            const remaining = this.bossParts.filter(p => !p.destroyed).length;
+            if (remaining <= 3) this.phase = 2;
+            if (remaining <= 1) this.phase = 3;
+
+            if (remaining === 0) {
+              this.bossDefeated = true;
+              this.victoryTimer = 0;
+              game.playSound('victoryFanfare');
+              stopBgMusic();
+              startBgMusic('victory');
+
+              for (let i = 0; i < 8; i++) {
+                setTimeout(() => {
+                  game.spawnParticles(particlePresets.explosion(
+                    this.bossX + (Math.random() - 0.5) * 100,
+                    this.bossY + (Math.random() - 0.5) * 80
+                  ));
+                  game.spawnParticles(particlePresets.confetti(
+                    Math.random() * w, Math.random() * h * 0.5
+                  ));
+                }, i * 300);
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    // Clean projectiles and blasts
     this.projectiles = this.projectiles.filter(p => p.active);
+    this.magicBlasts = this.magicBlasts.filter(b => b.active);
 
     // Update boss part positions (sway)
     const baseX = this.bossX + sway;
     const s = game.getScale();
-    this.bossParts[0].x = baseX - 40 * s;
-    this.bossParts[1].x = baseX - 25 * s;
-    this.bossParts[2].x = baseX - 70 * s;
+    this.bossParts[0].x = baseX - 45 * s;
+    this.bossParts[1].x = baseX - 30 * s;
+    this.bossParts[2].x = baseX - 75 * s;
     this.bossParts[3].x = baseX + 35 * s;
-    this.bossParts[4].x = baseX - 5 * s;
+    this.bossParts[4].x = baseX - 8 * s;
   }
 
   private bossShoot(game: GameEngine) {
@@ -300,12 +418,12 @@ export class Act3Scene implements Scene {
     const sx = shooter.x + shooter.w / 2;
     const sy = shooter.y + shooter.h / 2;
 
-    // Aim at player with some variance
+    // Aim at player with variance — slower and less accurate for a child
     const dx = this.playerX - sx;
     const dy = this.playerY - sy;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    const speed = 150 + this.phase * 40;
-    const variance = 0.3;
+    const speed = 110 + this.phase * 25;
+    const variance = 0.5;
 
     const proj: Projectile = {
       x: sx, y: sy,
@@ -409,6 +527,23 @@ export class Act3Scene implements Scene {
       ctx.shadowBlur = 0;
     }
 
+    // Magic blasts (player's shots)
+    for (const blast of this.magicBlasts) {
+      if (!blast.active) continue;
+      const blastColor = isElphaba ? COLORS.emeraldGlow : COLORS.pinkGlow;
+      ctx.fillStyle = blastColor;
+      ctx.shadowColor = blastColor;
+      ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(blast.x, blast.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(blast.x, blast.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+
     // Player
     const blink = this.invincibleTimer > 0 && Math.sin(this.invincibleTimer * 20) > 0;
     if (!blink) {
@@ -423,17 +558,14 @@ export class Act3Scene implements Scene {
       }
     }
 
-    // Reflect zone indicator
+    // Magic aura around player (subtle glow)
     if (!this.bossDefeated) {
-      ctx.strokeStyle = isElphaba
-        ? `rgba(0, 255, 100, ${Math.sin(t * 4) * 0.15 + 0.15})`
-        : `rgba(255, 100, 180, ${Math.sin(t * 4) * 0.15 + 0.15})`;
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
+      const auraColor = isElphaba ? 'rgba(0, 255, 100,' : 'rgba(255, 100, 180,';
+      const auraAlpha = Math.sin(t * 3) * 0.08 + 0.12;
+      ctx.fillStyle = `${auraColor} ${auraAlpha})`;
       ctx.beginPath();
-      ctx.arc(this.playerX, this.playerY, 100, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.arc(this.playerX, this.playerY, 35, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // HUD
@@ -464,8 +596,8 @@ export class Act3Scene implements Scene {
     if (game.state.levelTime < 4 && !this.bossDefeated) {
       const alpha = Math.max(0, 1 - game.state.levelTime / 4);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Move to dodge!', w / 2, h * 0.88, 13 * scale, '#fff');
-      drawText(ctx, 'Tap near projectiles to reflect!', w / 2, h * 0.93, 12 * scale, '#ccc');
+      drawText(ctx, 'Drag to move, dodge the fireballs!', w / 2, h * 0.88, 13 * scale, '#fff');
+      drawText(ctx, 'Tap to shoot magic at the machine!', w / 2, h * 0.93, 12 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
   }
