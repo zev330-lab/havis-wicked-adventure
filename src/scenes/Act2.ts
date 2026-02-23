@@ -201,22 +201,39 @@ export class Act2Scene implements Scene {
     const isElphaba = game.state.character === 'elphaba';
     const speed = this.speedTimer > 0 ? this.moveSpeed * 1.5 : this.moveSpeed;
 
-    // Horizontal movement
+    // Horizontal movement — touch follows finger X position
     this.playerVX = 0;
-    if (game.input.left || (game.input.isTouching && game.input.touchX < game.width * 0.33)) {
+    if (game.input.isTouching) {
+      // Convert screen touch to world X
+      const worldTouchX = game.input.touchX + this.cameraX;
+      const dx = worldTouchX - this.playerX;
+      if (Math.abs(dx) > 10) {
+        this.playerVX = dx > 0 ? speed : -speed;
+        this.facing = dx > 0 ? 1 : -1;
+      }
+      // Jump when touching upper portion of screen
+      const touchYRatio = game.input.touchY / game.height;
+      if (touchYRatio < 0.4 && this.onGround) {
+        this.playerVY = this.jumpForce;
+        this.jumpHeld = true;
+        this.jumpTimer = 0;
+        this.onGround = false;
+        game.playSound('jump');
+      }
+    }
+    if (game.input.left) {
       this.playerVX = -speed;
       this.facing = -1;
     }
-    if (game.input.right || (game.input.isTouching && game.input.touchX > game.width * 0.66)) {
+    if (game.input.right) {
       this.playerVX = speed;
       this.facing = 1;
     }
 
-    // Jump — variable height
-    const wantJump = game.input.jump || game.input.up ||
-      (game.input.isTouching && game.input.touchY < game.height * 0.4);
+    // Jump — variable height (keyboard)
+    const wantJump = game.input.jump || game.input.up;
 
-    if (game.input.jumpPressed || (game.input.tap && game.input.tapY < game.height * 0.5)) {
+    if (game.input.jumpPressed && !game.input.isTouching) {
       if (this.onGround) {
         this.playerVY = this.jumpForce;
         this.jumpHeld = true;
@@ -498,8 +515,9 @@ export class Act2Scene implements Scene {
     if (!blink) {
       ctx.save();
       if (this.facing < 0) {
-        ctx.translate(this.playerX * 2, 0);
+        ctx.translate(this.playerX, 0);
         ctx.scale(-1, 1);
+        ctx.translate(-this.playerX, 0);
       }
       const charScale = scale * 1.4;
       const hasSparkly = game.state.unlockedCostumes.includes('elphaba_sparkly');
@@ -570,8 +588,8 @@ export class Act2Scene implements Scene {
     if (game.state.levelTime < 4) {
       const alpha = Math.max(0, 1 - game.state.levelTime / 4);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Left/Right side to move', w / 2, h * 0.85, 13 * scale, '#fff');
-      drawText(ctx, 'Top of screen to jump', w / 2, h * 0.9, 12 * scale, '#ccc');
+      drawText(ctx, 'Touch to move toward finger', w / 2, h * 0.85, 13 * scale, '#fff');
+      drawText(ctx, 'Touch top of screen to jump', w / 2, h * 0.9, 12 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
   }

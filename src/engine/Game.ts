@@ -138,10 +138,9 @@ export class Game implements GameEngine {
     this.canvas.style.height = `${canvasH}px`;
     this.canvas.width = canvasW * dpr;
     this.canvas.height = canvasH * dpr;
-    this.width = canvasW * dpr;
-    this.height = canvasH * dpr;
+    // DPR transform makes drawing ops use CSS-pixel units
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Use CSS dimensions for game logic
+    // Game logic uses CSS pixels (matching touch coordinates)
     this.width = canvasW;
     this.height = canvasH;
   }
@@ -213,8 +212,8 @@ export class Game implements GameEngine {
     // Update particles
     this.particleSystem.update(dt);
 
-    // Clear and render
-    this.ctx.clearRect(0, 0, this.width, this.height);
+    // Clear and render (use canvas pixel dimensions to clear entire canvas)
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const scene = this.scenes.get(this.state.currentScene);
     if (scene) scene.render(this, this.ctx);

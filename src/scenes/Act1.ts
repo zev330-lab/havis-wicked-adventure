@@ -85,7 +85,7 @@ export class Act1Scene implements Scene {
     const h = game.height;
     const isElphaba = game.state.character === 'elphaba';
 
-    // Player movement — touch/tilt/keyboard
+    // Player movement — touch directly follows finger position
     const moveSpeed = 250;
     let targetX = this.playerX;
     let targetY = this.playerY;
@@ -93,12 +93,11 @@ export class Act1Scene implements Scene {
     if (game.input.isTouching) {
       targetX = game.input.touchX;
       targetY = game.input.touchY;
-    } else {
-      if (game.input.left) targetX -= moveSpeed * dt;
-      if (game.input.right) targetX += moveSpeed * dt;
-      if (game.input.up) targetY -= moveSpeed * dt;
-      if (game.input.down) targetY += moveSpeed * dt;
     }
+    if (game.input.left) targetX -= moveSpeed * dt;
+    if (game.input.right) targetX += moveSpeed * dt;
+    if (game.input.up) targetY -= moveSpeed * dt;
+    if (game.input.down) targetY += moveSpeed * dt;
 
     // Tilt
     if (Math.abs(game.input.tiltX) > 0.1) {
@@ -108,15 +107,16 @@ export class Act1Scene implements Scene {
       targetY += game.input.tiltY * moveSpeed * dt * 0.5;
     }
 
-    // Smooth follow
-    this.playerX += (targetX - this.playerX) * Math.min(1, dt * 8);
-    this.playerY += (targetY - this.playerY) * Math.min(1, dt * 8);
+    // Smooth follow — fast lerp so it feels responsive
+    const lerpSpeed = game.input.isTouching ? 12 : 8;
+    this.playerX += (targetX - this.playerX) * Math.min(1, dt * lerpSpeed);
+    this.playerY += (targetY - this.playerY) * Math.min(1, dt * lerpSpeed);
 
     // Clamp
     this.playerX = Math.max(25, Math.min(w - 25, this.playerX));
     this.playerY = Math.max(50, Math.min(h - 50, this.playerY));
 
-    // Magic blast
+    // Magic blast — only on tap (quick touch+release), not drag
     if ((game.input.tap || game.input.actionPressed) && !this.magicBlastActive) {
       this.magicBlastActive = true;
       this.magicBlastX = this.playerX + 30;

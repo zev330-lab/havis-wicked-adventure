@@ -121,17 +121,16 @@ export class Act3Scene implements Scene {
       return;
     }
 
-    // Player movement
+    // Player movement — finger-follow
     const moveSpeed = 220;
     if (game.input.isTouching) {
-      this.playerX += (game.input.touchX - this.playerX) * Math.min(1, dt * 8);
-      this.playerY += (game.input.touchY - this.playerY) * Math.min(1, dt * 8);
-    } else {
-      if (game.input.left) this.playerX -= moveSpeed * dt;
-      if (game.input.right) this.playerX += moveSpeed * dt;
-      if (game.input.up) this.playerY -= moveSpeed * dt;
-      if (game.input.down) this.playerY += moveSpeed * dt;
+      this.playerX += (game.input.touchX - this.playerX) * Math.min(1, dt * 12);
+      this.playerY += (game.input.touchY - this.playerY) * Math.min(1, dt * 12);
     }
+    if (game.input.left) this.playerX -= moveSpeed * dt;
+    if (game.input.right) this.playerX += moveSpeed * dt;
+    if (game.input.up) this.playerY -= moveSpeed * dt;
+    if (game.input.down) this.playerY += moveSpeed * dt;
 
     // Tilt
     if (Math.abs(game.input.tiltX) > 0.1) {

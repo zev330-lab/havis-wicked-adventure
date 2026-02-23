@@ -50,13 +50,12 @@ export class InputManager {
   }
 
   private setupTouch() {
+    // Convert touch position to game coordinates (CSS pixels, matching game.width/height)
     const getCanvasPos = (touch: Touch) => {
       const rect = this.canvas.getBoundingClientRect();
-      const scaleX = this.canvas.width / rect.width;
-      const scaleY = this.canvas.height / rect.height;
       return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY,
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
       };
     };
 
@@ -136,23 +135,10 @@ export class InputManager {
     this.state.action = actionNow;
     this.prevAction = actionNow;
 
-    // Touch-based directional input (virtual joystick via touch position)
-    if (this.state.isTouching) {
-      const canvasW = this.canvas.width;
-      const canvasH = this.canvas.height;
-      // Left third of screen = left, right third = right
-      if (this.state.touchX < canvasW * 0.33) {
-        this.state.left = true;
-      } else if (this.state.touchX > canvasW * 0.66) {
-        this.state.right = true;
-      }
-      // Top third = up
-      if (this.state.touchY < canvasH * 0.4) {
-        this.state.up = true;
-        if (!this.prevTouchState) {
-          this.state.jumpPressed = true;
-        }
-      }
+    // Touch input is handled directly by scenes using touchX/touchY/isTouching
+    // We just detect jumpPressed on new touch
+    if (this.state.isTouching && !this.prevTouchState) {
+      this.state.jumpPressed = true;
     }
 
     this.prevTouchState = this.state.isTouching;
