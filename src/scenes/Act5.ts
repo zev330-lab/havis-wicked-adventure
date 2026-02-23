@@ -134,51 +134,58 @@ export class Act5Scene implements Scene {
 
     const isElphaba = game.state.character === 'elphaba';
 
-    // Player movement — follow finger in 2D
-    let targetX = this.playerX;
-    let targetY = this.playerY;
-    const moveSpeed = 160;
+    // Player movement — directional joystick style
+    // Finger direction from player's screen position controls movement direction
+    const moveSpeed = this.cell * 5; // scale speed with cell size
+    const r = this.cell * 0.28; // player collision radius scales with cell
+    let moveX = 0;
+    let moveY = 0;
 
     if (game.input.isTouching) {
-      targetX = game.input.touchX + this.cameraX;
-      targetY = game.input.touchY + this.cameraY;
+      // Player screen position
+      const playerScreenX = this.playerX - this.cameraX;
+      const playerScreenY = this.playerY - this.cameraY;
+      // Direction from player to finger
+      const tdx = game.input.touchX - playerScreenX;
+      const tdy = game.input.touchY - playerScreenY;
+      const tdist = Math.sqrt(tdx * tdx + tdy * tdy);
+      if (tdist > 8) {
+        // Move in that direction at constant speed (faster if finger is farther)
+        const speedMul = Math.min(1, tdist / 80);
+        moveX = (tdx / tdist) * moveSpeed * speedMul;
+        moveY = (tdy / tdist) * moveSpeed * speedMul;
+      }
     }
-    if (game.input.left) targetX = this.playerX - moveSpeed * dt * 10;
-    if (game.input.right) targetX = this.playerX + moveSpeed * dt * 10;
-    if (game.input.up) targetY = this.playerY - moveSpeed * dt * 10;
-    if (game.input.down) targetY = this.playerY + moveSpeed * dt * 10;
+    if (game.input.left) moveX = -moveSpeed;
+    if (game.input.right) moveX = moveSpeed;
+    if (game.input.up) moveY = -moveSpeed;
+    if (game.input.down) moveY = moveSpeed;
 
-    // Move toward target with lerp
-    const dx = targetX - this.playerX;
-    const dy = targetY - this.playerY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > 2) {
-      const step = Math.min(moveSpeed * dt, dist);
-      let nx = this.playerX + (dx / dist) * step;
-      let ny = this.playerY + (dy / dist) * step;
+    const dist = Math.sqrt(moveX * moveX + moveY * moveY);
+    if (dist > 0) {
+      let nx = this.playerX + moveX * dt;
+      let ny = this.playerY + moveY * dt;
+      const dx = moveX;
+      const dy = moveY;
 
-      const r = 8; // player radius
       const time = game.time;
 
       // Wall collision — try X then Y independently (slide along walls)
-      const colX = Math.floor(nx / this.cell);
-      const rowY = Math.floor(this.playerY / this.cell);
-      const colCur = Math.floor(this.playerX / this.cell);
-      const rowN = Math.floor(ny / this.cell);
+      // Use a smaller collision buffer to make corners easier to navigate
+      const buf = r * 0.6;
 
       // Check X movement
       if (dx > 0) {
-        // Moving right — check right edge
         const checkCol = Math.floor((nx + r) / this.cell);
-        const checkRow1 = Math.floor((this.playerY - r + 2) / this.cell);
-        const checkRow2 = Math.floor((this.playerY + r - 2) / this.cell);
+        const checkRow1 = Math.floor((this.playerY - buf) / this.cell);
+        const checkRow2 = Math.floor((this.playerY + buf) / this.cell);
         if (this.isWallSolid(checkRow1, checkCol, time) || this.isWallSolid(checkRow2, checkCol, time)) {
           nx = checkCol * this.cell - r - 0.1;
         }
       } else if (dx < 0) {
         const checkCol = Math.floor((nx - r) / this.cell);
-        const checkRow1 = Math.floor((this.playerY - r + 2) / this.cell);
-        const checkRow2 = Math.floor((this.playerY + r - 2) / this.cell);
+        const checkRow1 = Math.floor((this.playerY - buf) / this.cell);
+        const checkRow2 = Math.floor((this.playerY + buf) / this.cell);
         if (this.isWallSolid(checkRow1, checkCol, time) || this.isWallSolid(checkRow2, checkCol, time)) {
           nx = (checkCol + 1) * this.cell + r + 0.1;
         }
@@ -187,15 +194,15 @@ export class Act5Scene implements Scene {
       // Check Y movement
       if (dy > 0) {
         const checkRow = Math.floor((ny + r) / this.cell);
-        const checkCol1 = Math.floor((nx - r + 2) / this.cell);
-        const checkCol2 = Math.floor((nx + r - 2) / this.cell);
+        const checkCol1 = Math.floor((nx - buf) / this.cell);
+        const checkCol2 = Math.floor((nx + buf) / this.cell);
         if (this.isWallSolid(checkRow, checkCol1, time) || this.isWallSolid(checkRow, checkCol2, time)) {
           ny = checkRow * this.cell - r - 0.1;
         }
       } else if (dy < 0) {
         const checkRow = Math.floor((ny - r) / this.cell);
-        const checkCol1 = Math.floor((nx - r + 2) / this.cell);
-        const checkCol2 = Math.floor((nx + r - 2) / this.cell);
+        const checkCol1 = Math.floor((nx - buf) / this.cell);
+        const checkCol2 = Math.floor((nx + buf) / this.cell);
         if (this.isWallSolid(checkRow, checkCol1, time) || this.isWallSolid(checkRow, checkCol2, time)) {
           ny = (checkRow + 1) * this.cell + r + 0.1;
         }
@@ -210,11 +217,12 @@ export class Act5Scene implements Scene {
     this.playerY = Math.max(10, Math.min(this.levelH - 10, this.playerY));
 
     // Collect gems
+    const collectR = this.cell * 0.6; // collection radius scales with cell
     for (const gem of this.gems) {
       if (gem.collected) continue;
       const gx = gem.x - this.playerX;
       const gy = gem.y - this.playerY;
-      if (gx * gx + gy * gy < 20 * 20) {
+      if (gx * gx + gy * gy < collectR * collectR) {
         gem.collected = true;
         this.collectedGems++;
         game.state.gems++;
@@ -238,7 +246,7 @@ export class Act5Scene implements Scene {
       const doorY = (this.doorRow + 0.5) * this.cell;
       const ddx = doorX - this.playerX;
       const ddy = doorY - this.playerY;
-      if (ddx * ddx + ddy * ddy < 20 * 20) {
+      if (ddx * ddx + ddy * ddy < collectR * collectR) {
         game.state.actComplete = true;
         this.completeAct(game);
       }
@@ -370,90 +378,98 @@ export class Act5Scene implements Scene {
       }
     }
 
-    // Dance gems
+    // Dance gems — scale with cell size
+    const gemSize = this.cell * 0.3;
     for (const gem of this.gems) {
       if (gem.collected) continue;
       const gx = gem.x;
       const gy = gem.y;
-      const spin = t * 3 + gem.row;
-      const bob = Math.sin(t * 2 + gem.col) * 2;
+      const bob = Math.sin(t * 2 + gem.col) * 3;
 
       // Glow
       ctx.fillStyle = isElphaba
         ? `rgba(0, 255, 100, ${Math.sin(t * 2 + gem.col) * 0.1 + 0.15})`
         : `rgba(255, 100, 200, ${Math.sin(t * 2 + gem.col) * 0.1 + 0.15})`;
       ctx.beginPath();
-      ctx.arc(gx, gy + bob, 12, 0, Math.PI * 2);
+      ctx.arc(gx, gy + bob, gemSize * 1.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Diamond shape
       ctx.fillStyle = isElphaba ? COLORS.emeraldGlow : COLORS.pinkGlow;
       ctx.beginPath();
-      ctx.moveTo(gx, gy - 8 + bob);
-      ctx.lineTo(gx + 6, gy + bob);
-      ctx.lineTo(gx, gy + 8 + bob);
-      ctx.lineTo(gx - 6, gy + bob);
+      ctx.moveTo(gx, gy - gemSize + bob);
+      ctx.lineTo(gx + gemSize * 0.7, gy + bob);
+      ctx.lineTo(gx, gy + gemSize + bob);
+      ctx.lineTo(gx - gemSize * 0.7, gy + bob);
       ctx.closePath();
       ctx.fill();
 
       // Inner sparkle
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(gx, gy + bob, 2, 0, Math.PI * 2);
+      ctx.arc(gx, gy + bob, gemSize * 0.25, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Exit door
-    const doorX = this.doorCol * this.cell;
-    const doorY = this.doorRow * this.cell;
+    // Exit door — larger, more visible
+    const doorCellX = this.doorCol * this.cell;
+    const doorCellY = this.doorRow * this.cell;
+    const doorPad = this.cell * 0.08;
     if (this.doorOpen) {
-      // Golden open door
+      // Golden open door with strong pulse
       const pulse = Math.sin(t * 3) * 0.15 + 0.85;
-      ctx.fillStyle = `rgba(255, 215, 0, ${pulse * 0.4})`;
-      ctx.fillRect(doorX, doorY, this.cell, this.cell);
+      // Outer glow
+      ctx.fillStyle = `rgba(255, 215, 0, ${pulse * 0.2})`;
+      ctx.beginPath();
+      ctx.arc(doorCellX + this.cell / 2, doorCellY + this.cell / 2, this.cell * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      // Door fill
+      ctx.fillStyle = `rgba(255, 215, 0, ${pulse * 0.5})`;
+      ctx.fillRect(doorCellX, doorCellY, this.cell, this.cell);
       ctx.strokeStyle = COLORS.gold;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(doorX + 2, doorY + 2, this.cell - 4, this.cell - 4);
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(doorCellX + doorPad, doorCellY + doorPad, this.cell - doorPad * 2, this.cell - doorPad * 2);
       // Archway
       ctx.beginPath();
-      ctx.arc(doorX + this.cell / 2, doorY + this.cell * 0.6, this.cell * 0.4, Math.PI, 0);
+      ctx.arc(doorCellX + this.cell / 2, doorCellY + this.cell * 0.6, this.cell * 0.38, Math.PI, 0);
       ctx.strokeStyle = COLORS.gold;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
     } else {
       // Locked door
       ctx.fillStyle = 'rgba(100, 80, 60, 0.6)';
-      ctx.fillRect(doorX, doorY, this.cell, this.cell);
+      ctx.fillRect(doorCellX, doorCellY, this.cell, this.cell);
       ctx.strokeStyle = '#666';
       ctx.lineWidth = 1;
-      ctx.strokeRect(doorX + 2, doorY + 2, this.cell - 4, this.cell - 4);
+      ctx.strokeRect(doorCellX + doorPad, doorCellY + doorPad, this.cell - doorPad * 2, this.cell - doorPad * 2);
     }
 
-    // Player — top-down circle
+    // Player — top-down circle, scaled with cell
+    const pR = this.cell * 0.28;
     const pColor = isElphaba ? COLORS.emeraldGlow : COLORS.pinkGlow;
     ctx.fillStyle = pColor;
     ctx.beginPath();
-    ctx.arc(this.playerX, this.playerY, 8, 0, Math.PI * 2);
+    ctx.arc(this.playerX, this.playerY, pR, 0, Math.PI * 2);
     ctx.fill();
     // Hat/tiara indicator
     ctx.fillStyle = isElphaba ? '#000' : COLORS.gold;
     ctx.beginPath();
     if (isElphaba) {
       // Tiny hat triangle
-      ctx.moveTo(this.playerX, this.playerY - 12);
-      ctx.lineTo(this.playerX - 5, this.playerY - 5);
-      ctx.lineTo(this.playerX + 5, this.playerY - 5);
+      ctx.moveTo(this.playerX, this.playerY - pR * 1.5);
+      ctx.lineTo(this.playerX - pR * 0.6, this.playerY - pR * 0.6);
+      ctx.lineTo(this.playerX + pR * 0.6, this.playerY - pR * 0.6);
     } else {
       // Tiny tiara
-      ctx.arc(this.playerX, this.playerY - 10, 4, Math.PI, 0);
+      ctx.arc(this.playerX, this.playerY - pR * 1.2, pR * 0.5, Math.PI, 0);
     }
     ctx.fill();
     // Glow around player
     ctx.strokeStyle = pColor;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.globalAlpha = 0.4;
     ctx.beginPath();
-    ctx.arc(this.playerX, this.playerY, 12, 0, Math.PI * 2);
+    ctx.arc(this.playerX, this.playerY, pR * 1.4, 0, Math.PI * 2);
     ctx.stroke();
     ctx.globalAlpha = 1;
 
@@ -503,14 +519,14 @@ export class Act5Scene implements Scene {
     if (game.state.levelTime < 5 && !game.state.actComplete) {
       const alpha = Math.max(0, 1 - game.state.levelTime / 5);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Touch to move through the maze!', w / 2, h * 0.88, 14 * scale, '#fff');
+      drawText(ctx, 'Drag your finger to guide Havi!', w / 2, h * 0.88, 14 * scale, '#fff');
       drawText(ctx, 'Collect all gems to open the door!', w / 2, h * 0.93, 12 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
   }
 
   private drawMinimap(ctx: CanvasRenderingContext2D, w: number, h: number, time: number) {
-    const mapScale = 3;
+    const mapScale = Math.max(3, Math.floor(w / 100));
     const mapW = COLS * mapScale;
     const mapH = ROWS * mapScale;
     const mapX = w - mapW - 8;
