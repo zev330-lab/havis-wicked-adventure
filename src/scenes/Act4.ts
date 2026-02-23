@@ -119,17 +119,23 @@ export class Act4Scene implements Scene {
         item.active = false;
 
         if (item.type === 'bad') {
-          this.badCatchCount++;
-          game.state.noHitBonus = false;
-          game.state.health--;
-          game.playSound('hit');
-          game.shakeCamera(6, 0.2);
-          this.popularityMeter = Math.max(0, this.popularityMeter - 0.05);
+          // During spotlight, bad items are deflected
+          if (this.spotlightTimer > 0) {
+            game.playSound('sparkle');
+            game.spawnParticles(particlePresets.explosion(item.x, item.y));
+          } else {
+            this.badCatchCount++;
+            game.state.noHitBonus = false;
+            game.state.health--;
+            game.playSound('hit');
+            game.shakeCamera(6, 0.2);
+            this.popularityMeter = Math.max(0, this.popularityMeter - 0.05);
 
-          if (game.state.health <= 0) {
-            game.state.health = 3;
-            this.enter(game);
-            return;
+            if (game.state.health <= 0) {
+              game.state.health = 3;
+              this.enter(game);
+              return;
+            }
           }
         } else {
           this.catchCount++;

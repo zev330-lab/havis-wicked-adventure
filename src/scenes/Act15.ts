@@ -149,12 +149,18 @@ export class Act15Scene implements Scene {
 
   private buildPalette(game: GameEngine) {
     this.palette = [];
-    const paletteY = game.height * 0.72;
+    const w = game.width;
+    const paletteTopY = game.height * 0.68;
+    const cols = 4;
+    const cellW = (w - 20) / cols;
+    const rowH = 58;
     for (let i = 0; i < DECO_TYPES.length; i++) {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
       this.palette.push({
         type: DECO_TYPES[i],
-        x: i * 70 + 20,
-        y: paletteY,
+        x: 10 + col * cellW + cellW / 2,
+        y: paletteTopY + row * rowH + rowH / 2,
       });
     }
   }

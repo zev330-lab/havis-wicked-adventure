@@ -121,7 +121,7 @@ export class Act3Scene implements Scene {
     // Victory cutscene
     if (this.bossDefeated) {
       this.victoryTimer += dt;
-      if (this.victoryTimer > 6) {
+      if (this.victoryTimer > 6 && !game.state.actComplete) {
         game.state.actComplete = true;
         this.completeAct(game);
       }

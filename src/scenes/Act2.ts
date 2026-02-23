@@ -86,6 +86,7 @@ export class Act2Scene implements Scene {
 
     game.state.gems = 0;
     game.state.health = 3;
+    game.state.maxHealth = 3;
     game.state.noHitBonus = true;
     game.state.levelTime = 0;
     game.state.actComplete = false;

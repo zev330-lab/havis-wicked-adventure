@@ -289,7 +289,7 @@ export class Act7Scene implements Scene {
 
   private completeAct(game: GameEngine) {
     let stars = 1;
-    if (game.state.gems >= 25) stars++;
+    if (game.state.gems >= 20) stars++;
     if (game.state.noHitBonus) stars++;
     game.state.stars.act7 = Math.max(game.state.stars.act7 || 0, stars);
 

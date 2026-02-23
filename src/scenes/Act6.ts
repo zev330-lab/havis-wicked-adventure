@@ -89,6 +89,7 @@ export class Act6Scene implements Scene {
     this.playerY = -30; // Start near bottom of first safe platform
 
     game.state.gems = 0;
+    game.state.score = 0;
     game.state.health = 5;
     game.state.maxHealth = 5;
     game.state.noHitBonus = true;
@@ -256,7 +257,7 @@ export class Act6Scene implements Scene {
           game.playSound('crumble');
           // Rubble particles
           game.spawnParticles({
-            x: plat.x + plat.w / 2 - this.scrollY, y: plat.y - this.scrollY,
+            x: plat.x + plat.w / 2, y: plat.y - this.scrollY,
             count: 8, spread: plat.w / 2,
             speed: 60, speedVariance: 40,
             life: 0.6, lifeVariance: 0.2,

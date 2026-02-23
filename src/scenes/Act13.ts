@@ -453,7 +453,7 @@ export class Act13Scene implements Scene {
 
   private completeAct(game: GameEngine) {
     let stars = 1;
-    if (this.heartPairsCollected >= 10) stars++;
+    if (this.heartPairsCollected >= 4) stars++;
     if (this.beamNeverBelowTwo) stars++;
     game.state.stars.act13 = Math.max(game.state.stars.act13, stars);
 

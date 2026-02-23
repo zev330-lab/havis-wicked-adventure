@@ -65,6 +65,7 @@ export class Act10Scene implements Scene {
     this.worldGenY = 0;
 
     game.state.gems = 0;
+    game.state.score = 0;
     game.state.health = 3;
     game.state.maxHealth = 3;
     game.state.noHitBonus = true;
@@ -164,7 +165,7 @@ export class Act10Scene implements Scene {
       const dx = lm.x - this.playerX;
       const dy = lm.y - playerWorldY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 80) {
+      if (dist < 120) {
         lm.visited = true;
         this.visitedCount++;
         game.playSound('powerUp');

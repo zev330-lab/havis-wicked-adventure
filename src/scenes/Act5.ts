@@ -361,7 +361,9 @@ export class Act5Scene implements Scene {
             ctx.lineWidth = 1;
             ctx.strokeRect(x + 2, y + 2, this.cell - 4, this.cell - 4);
           } else {
-            // Open — faint outline
+            // Open — draw floor first, then faint outline on top
+            ctx.fillStyle = (r + c) % 2 === 0 ? '#0d2a18' : '#0a2214';
+            ctx.fillRect(x, y, this.cell, this.cell);
             const alpha = warning ? 0.1 + Math.sin(t * 12) * 0.05 : 0.08;
             ctx.strokeStyle = isElphaba
               ? `rgba(0, 180, 80, ${alpha})`
@@ -370,9 +372,6 @@ export class Act5Scene implements Scene {
             ctx.setLineDash([3, 3]);
             ctx.strokeRect(x + 2, y + 2, this.cell - 4, this.cell - 4);
             ctx.setLineDash([]);
-            // Floor beneath
-            ctx.fillStyle = (r + c) % 2 === 0 ? '#0d2a18' : '#0a2214';
-            ctx.fillRect(x, y, this.cell, this.cell);
           }
         }
       }
