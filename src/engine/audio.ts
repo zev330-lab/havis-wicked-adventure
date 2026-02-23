@@ -415,6 +415,72 @@ const bgMusicPatterns: Record<string, { notes: number[][]; tempo: number; type: 
     type: 'triangle',
     vol: 0.04,
   },
+  oneShortDay: {
+    notes: [
+      [C5, E5], [0], [G5], [E5],
+      [F5], [0], [D5], [0],
+      [E5, C5], [G5], [0], [A5],
+      [G5], [E5], [0], [0],
+    ],
+    tempo: 220,
+    type: 'sine',
+    vol: 0.04,
+  },
+  wonderful: {
+    notes: [
+      [Eb4], [0], [Gb4], [0],
+      [Bb4], [0], [Db4], [0],
+      [Eb4, Gb4], [0], [0], [Ab4],
+      [0], [Gb4], [Eb4], [0],
+    ],
+    tempo: 210,
+    type: 'square',
+    vol: 0.03,
+  },
+  noGoodDeed: {
+    notes: [
+      [Eb4, Bb3], [0], [Gb4], [Eb4],
+      [Db4], [0], [Bb3], [Eb4],
+      [Gb4, Bb4], [0], [Ab4], [0],
+      [Gb4], [Eb4], [Db4], [0],
+    ],
+    tempo: 160,
+    type: 'sawtooth',
+    vol: 0.03,
+  },
+  asLongAsYoureMine: {
+    notes: [
+      [E4, G4], [0], [A4], [B4],
+      [0], [A4], [G4], [0],
+      [E4, B4], [0], [A4], [0],
+      [G4], [0], [E4], [0],
+    ],
+    tempo: 280,
+    type: 'sine',
+    vol: 0.035,
+  },
+  marchHunters: {
+    notes: [
+      [Eb4], [Eb4], [Bb3], [0],
+      [Db4], [Db4], [Ab4], [0],
+      [Eb4, Gb4], [0], [Bb3], [Bb3],
+      [Db4], [0], [Eb4], [0],
+    ],
+    tempo: 200,
+    type: 'sawtooth',
+    vol: 0.03,
+  },
+  thankGoodness: {
+    notes: [
+      [C5, E5], [G5], [0], [E5],
+      [F5, A5], [0], [G5], [E5],
+      [C5, G5], [0], [A5], [0],
+      [G5, E5], [0], [C5], [0],
+    ],
+    tempo: 190,
+    type: 'triangle',
+    vol: 0.04,
+  },
 };
 
 export function startBgMusic(name: string) {

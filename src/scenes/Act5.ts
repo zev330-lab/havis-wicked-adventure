@@ -1,6 +1,6 @@
 // Act 5 — 'Dancing Through Life' — Top-Down Maze
 // Navigate a ballroom maze collecting dance gems, magic walls pulse open/closed
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawText, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
@@ -288,7 +288,7 @@ export class Act5Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act5') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act5')) {
       game.state.lastCompletedAct = 'act5';
     }
     game.saveGame();

@@ -1,6 +1,6 @@
 // Act 4 — 'Popular' — Catch Game
 // Catch falling fashion items (tiaras, wands, shoes) while avoiding bad items
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawSky, drawElphaba, drawGlinda, drawHUD, drawText, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
@@ -205,7 +205,7 @@ export class Act4Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act4') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act4')) {
       game.state.lastCompletedAct = 'act4';
     }
     game.saveGame();

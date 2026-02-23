@@ -1,7 +1,7 @@
 // Act 1 — 'Something Has Changed Within Me' — Flying Level
 // Elphaba: broomstick through sky collecting emerald gems, dodging clouds/birds
 // Glinda: float in bubble through sparkly sky collecting pink stars
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import {
   drawSky, drawClouds, drawEmeraldCity, drawElphaba, drawGlinda,
   drawGem, drawHUD, drawText, COLORS,
@@ -266,7 +266,7 @@ export class Act1Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act1') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act1')) {
       game.state.lastCompletedAct = 'act1';
     }
     game.saveGame();

@@ -1,6 +1,6 @@
 // Act 2 — 'Defying Gravity' — Platformer Level
 // Navigate Emerald City rooftops, collect spell books, interact with NPCs
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import {
   drawSky, drawEmeraldCity, drawElphaba, drawGlinda, drawGem,
   drawHUD, drawPlatform, drawNPC, drawText, COLORS,
@@ -475,7 +475,7 @@ export class Act2Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act2') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act2')) {
       game.state.lastCompletedAct = 'act2';
     }
     game.saveGame();

@@ -164,6 +164,108 @@ const storyCards: Record<string, StoryCard[]> = {
       bgBottom: '#08001a',
     },
   ],
+  act10_intro: [
+    {
+      title: 'Act Ten',
+      lines: [
+        '"One Short Day"',
+        '',
+        'Welcome to the Emerald City, Havi!',
+        'Steer through the streets',
+        'and visit all the famous landmarks.',
+        'No rush — just explore and enjoy!',
+        '',
+        'What a wonderful city!',
+      ],
+      bgTop: '#002a15',
+      bgBottom: '#001a0d',
+    },
+  ],
+  act11_intro: [
+    {
+      title: 'Act Eleven',
+      lines: [
+        '"Wonderful"',
+        '',
+        'The Wizard has hidden the truth!',
+        'Flip the magic tiles and find',
+        'the matching pairs to reveal',
+        'what lies beneath the illusion.',
+        '',
+        'Is it real, or wonderful?',
+      ],
+      bgTop: '#0a0020',
+      bgBottom: '#050510',
+    },
+  ],
+  act12_intro: [
+    {
+      title: 'Act Twelve',
+      lines: [
+        '"No Good Deed"',
+        '',
+        'Dark creatures approach, Havi!',
+        'Draw spell chains between the runes.',
+        'The longer the chain,',
+        'the more powerful the magic blast!',
+        '',
+        'Protect the Land of Oz!',
+      ],
+      bgTop: '#1a0020',
+      bgBottom: '#0a0015',
+    },
+  ],
+  act13_intro: [
+    {
+      title: 'Act Thirteen',
+      lines: [
+        '"As Long As You\'re Mine"',
+        '',
+        'Elphaba and Glinda fly together!',
+        'Move one and the other follows.',
+        'Keep their magic beam strong',
+        'and collect the heart pairs!',
+        '',
+        'Together, they are unstoppable!',
+      ],
+      bgTop: '#000820',
+      bgBottom: '#0d1a20',
+    },
+  ],
+  act14_intro: [
+    {
+      title: 'Act Fourteen',
+      lines: [
+        '"March of the Witch Hunters"',
+        '',
+        'The witch hunters are searching!',
+        'Hold the screen to hide.',
+        'Let go to sneak forward.',
+        'Don\'t let the searchlights find you!',
+        '',
+        'Be brave and be sneaky, Havi!',
+      ],
+      bgTop: '#05081a',
+      bgBottom: '#0a0a15',
+    },
+  ],
+  act15_intro: [
+    {
+      title: 'Act Fifteen',
+      lines: [
+        '"Thank Goodness"',
+        '',
+        'It\'s celebration time, Havi!',
+        'Build a beautiful parade float!',
+        'Drag decorations onto the float,',
+        'then watch the grand parade!',
+        '',
+        'All of Oz is cheering for you!',
+      ],
+      bgTop: '#1a1000',
+      bgBottom: '#0d1a05',
+    },
+  ],
 };
 
 export class StoryCardScene implements Scene {

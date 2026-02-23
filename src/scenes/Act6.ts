@@ -1,6 +1,6 @@
 // Act 6 — 'No One Mourns the Wicked' — Vertical Escape
 // Climb up through crumbling palace, stay above rising green fire
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import {
   drawElphaba, drawGlinda, drawPlatform, drawGem,
   drawHUD, drawText, COLORS,
@@ -399,7 +399,9 @@ export class Act6Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    game.state.lastCompletedAct = 'act6';
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act6')) {
+      game.state.lastCompletedAct = 'act6';
+    }
     game.saveGame();
     game.playSound('actComplete');
 

@@ -1,6 +1,6 @@
-// Level select — styled like a theater playbill
-import { Scene, GameEngine, ActId } from '../engine/types';
-import { drawSky, drawText, drawEmeraldCity, COLORS } from '../engine/renderer';
+// Level select — styled like a theater playbill, scrollable for 15 acts
+import { Scene, GameEngine, ActId, ACT_ORDER, actIndex } from '../engine/types';
+import { drawText, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 
 interface ActInfo {
@@ -19,19 +19,47 @@ const acts: ActInfo[] = [
   { id: 'act6', title: 'Act VI', subtitle: 'The Escape', song: '"No One Mourns"' },
   { id: 'act7', title: 'Act VII', subtitle: 'Bubble Float', song: '"The Wizard and I"' },
   { id: 'act8', title: 'Act VIII', subtitle: 'Tap to Zap', song: '"What Is This Feeling?"' },
-  { id: 'act9', title: 'Act IX', subtitle: 'Grand Finale', song: '"For Good (Finale)"' },
+  { id: 'act9', title: 'Act IX', subtitle: 'Rhythm Tap', song: '"For Good (Finale)"' },
+  { id: 'act10', title: 'Act X', subtitle: 'City Dash', song: '"One Short Day"' },
+  { id: 'act11', title: 'Act XI', subtitle: 'Illusions', song: '"Wonderful"' },
+  { id: 'act12', title: 'Act XII', subtitle: 'Spell Chain', song: '"No Good Deed"' },
+  { id: 'act13', title: 'Act XIII', subtitle: 'Pair Flight', song: '"As Long As You\'re Mine"' },
+  { id: 'act14', title: 'Act XIV', subtitle: 'Stealth Escape', song: '"March of the Witch Hunters"' },
+  { id: 'act15', title: 'Act XV', subtitle: 'Parade', song: '"Thank Goodness"' },
 ];
 
 export class LevelSelectScene implements Scene {
   private timer = 0;
   private sparkleTimer = 0;
 
+  // Scroll state
+  private scrollOffset = 0;
+  private scrollVelocity = 0;
+  private isDragging = false;
+  private dragStartY = 0;
+  private dragStartScroll = 0;
+  private dragDistance = 0;
+  private lastTouchY = 0;
+
   enter(game: GameEngine) {
     this.timer = 0;
     this.sparkleTimer = 0;
+    this.scrollVelocity = 0;
+    this.isDragging = false;
+    this.dragDistance = 0;
   }
 
   exit(_game: GameEngine) {}
+
+  private getCardLayout(h: number, scale: number) {
+    const cardStartY = h * 0.18;
+    const cardHeight = h * 0.065;
+    const cardGap = h * 0.008;
+    const totalContentHeight = acts.length * (cardHeight + cardGap);
+    const visibleHeight = h * 0.78; // from cardStartY to bottom quote area
+    const maxScroll = Math.max(0, totalContentHeight - visibleHeight);
+    return { cardStartY, cardHeight, cardGap, totalContentHeight, visibleHeight, maxScroll };
+  }
 
   update(game: GameEngine, dt: number) {
     this.timer += dt;
@@ -42,19 +70,55 @@ export class LevelSelectScene implements Scene {
       game.spawnParticles(particlePresets.ambientSparkle(0, 0, game.width, game.height));
     }
 
-    // Check for act selection
-    if (game.input.tap) {
-      const h = game.height;
-      const cardStartY = h * 0.18;
-      const cardHeight = h * 0.075;
-      const cardGap = h * 0.012;
+    const h = game.height;
+    const scale = game.getScale();
+    const { maxScroll } = this.getCardLayout(h, scale);
+
+    // Handle scrolling
+    if (game.input.isTouching) {
+      if (!this.isDragging) {
+        // Start drag
+        this.isDragging = true;
+        this.dragStartY = game.input.touchY;
+        this.dragStartScroll = this.scrollOffset;
+        this.lastTouchY = game.input.touchY;
+        this.dragDistance = 0;
+        this.scrollVelocity = 0;
+      } else {
+        // Continue drag
+        const deltaY = game.input.touchY - this.lastTouchY;
+        this.dragDistance += Math.abs(game.input.touchY - this.dragStartY);
+        this.scrollOffset = this.dragStartScroll - (game.input.touchY - this.dragStartY);
+        this.scrollVelocity = -deltaY / Math.max(dt, 0.016);
+        this.lastTouchY = game.input.touchY;
+      }
+    } else {
+      if (this.isDragging) {
+        this.isDragging = false;
+      }
+      // Momentum scroll
+      if (Math.abs(this.scrollVelocity) > 1) {
+        this.scrollOffset += this.scrollVelocity * dt;
+        this.scrollVelocity *= 0.92; // friction
+      } else {
+        this.scrollVelocity = 0;
+      }
+    }
+
+    // Clamp scroll
+    this.scrollOffset = Math.max(0, Math.min(maxScroll, this.scrollOffset));
+
+    // Check for act selection (only if it was a tap, not a scroll drag)
+    if (game.input.tap && this.dragDistance < 15) {
+      const { cardStartY, cardHeight, cardGap } = this.getCardLayout(h, scale);
 
       for (let i = 0; i < acts.length; i++) {
         const act = acts[i];
-        const cy = cardStartY + i * (cardHeight + cardGap);
+        const cy = cardStartY + i * (cardHeight + cardGap) - this.scrollOffset;
         const isLocked = this.isActLocked(game, act.id);
 
-        if (!isLocked && game.input.tapY >= cy && game.input.tapY <= cy + cardHeight) {
+        if (!isLocked && game.input.tapY >= cy && game.input.tapY <= cy + cardHeight
+            && game.input.tapY >= cardStartY && game.input.tapY <= h * 0.95) {
           game.state.currentAct = act.id;
           game.state.storyCardIndex = 0;
           game.playSound('menuSelect');
@@ -69,11 +133,9 @@ export class LevelSelectScene implements Scene {
     if (actId === 'act1') return false;
     const prev = game.state.lastCompletedAct;
     if (!prev) return true;
-    // Each act unlocks when the previous act has been completed
-    const order: ActId[] = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9'];
-    const actIndex = order.indexOf(actId);
-    const completedIndex = order.indexOf(prev);
-    return completedIndex < actIndex - 1;
+    const ai = actIndex(actId);
+    const ci = actIndex(prev);
+    return ci < ai - 1;
   }
 
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {
@@ -101,7 +163,7 @@ export class LevelSelectScene implements Scene {
 
     // Playbill header
     drawText(ctx, 'THE PROGRAM', w / 2, h * 0.06, 12 * scale, COLORS.gold);
-    drawText(ctx, "Havi's Wicked Adventure", w / 2, h * 0.12, 22 * scale, COLORS.gold);
+    drawText(ctx, "Havi's Wicked Adventure", w / 2, h * 0.12, 20 * scale, COLORS.gold);
 
     // Divider
     ctx.strokeStyle = COLORS.gold;
@@ -113,15 +175,24 @@ export class LevelSelectScene implements Scene {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // Act cards — compact to fit 9
-    const cardStartY = h * 0.18;
-    const cardHeight = h * 0.075;
-    const cardGap = h * 0.012;
-    const cardMargin = 20 * scale;
+    // Scrollable card area — clip to visible region
+    const { cardStartY, cardHeight, cardGap, maxScroll } = this.getCardLayout(h, scale);
+    const cardMargin = 16 * scale;
+    const clipTop = cardStartY;
+    const clipBottom = h * 0.96;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, clipTop, w, clipBottom - clipTop);
+    ctx.clip();
 
     for (let i = 0; i < acts.length; i++) {
       const act = acts[i];
-      const cy = cardStartY + i * (cardHeight + cardGap);
+      const cy = cardStartY + i * (cardHeight + cardGap) - this.scrollOffset;
+
+      // Skip off-screen cards
+      if (cy + cardHeight < clipTop || cy > clipBottom) continue;
+
       const isLocked = this.isActLocked(game, act.id);
       const stars = game.state.stars[act.id] || 0;
 
@@ -138,7 +209,7 @@ export class LevelSelectScene implements Scene {
       ctx.fillStyle = cardGrad;
 
       // Rounded card
-      const r = 6 * scale;
+      const r = 5 * scale;
       const cx2 = cardMargin;
       const cw = w - cardMargin * 2;
       ctx.beginPath();
@@ -165,13 +236,14 @@ export class LevelSelectScene implements Scene {
       const textAlpha = isLocked ? 0.4 : 1;
       ctx.globalAlpha = textAlpha;
 
-      drawText(ctx, act.title, w / 2, cy + cardHeight * 0.25, 11 * scale, COLORS.gold);
-      drawText(ctx, act.subtitle, w / 2, cy + cardHeight * 0.55, 9 * scale, '#ddd');
+      // Title and subtitle side by side for compact layout
+      drawText(ctx, act.title, w * 0.22, cy + cardHeight * 0.5, 10 * scale, COLORS.gold);
+      drawText(ctx, act.subtitle, w / 2, cy + cardHeight * 0.5, 9 * scale, '#ddd');
 
-      // Stars (tiny for compact cards)
+      // Stars (right side)
       for (let s = 0; s < 3; s++) {
-        const sx = w / 2 - 14 * scale + s * 14 * scale;
-        const sy = cy + cardHeight * 0.85;
+        const sx = w * 0.78 - 12 * scale + s * 12 * scale;
+        const sy = cy + cardHeight * 0.5;
         ctx.fillStyle = s < stars ? COLORS.gold : 'rgba(100, 100, 100, 0.3)';
         ctx.beginPath();
         for (let si = 0; si < 10; si++) {
@@ -189,20 +261,32 @@ export class LevelSelectScene implements Scene {
       // Lock icon
       if (isLocked) {
         ctx.fillStyle = '#666';
-        ctx.fillRect(w / 2 - 5 * scale, cy + cardHeight * 0.3, 10 * scale, 7 * scale);
+        ctx.fillRect(w / 2 - 4 * scale, cy + cardHeight * 0.25, 8 * scale, 6 * scale);
         ctx.strokeStyle = '#666';
-        ctx.lineWidth = 1.2 * scale;
+        ctx.lineWidth = 1 * scale;
         ctx.beginPath();
-        ctx.arc(w / 2, cy + cardHeight * 0.28, 4 * scale, Math.PI, 0);
+        ctx.arc(w / 2, cy + cardHeight * 0.22, 3.5 * scale, Math.PI, 0);
         ctx.stroke();
       }
 
       ctx.globalAlpha = 1;
     }
 
+    ctx.restore();
+
+    // Scroll indicator (right edge)
+    if (maxScroll > 0) {
+      const indicatorHeight = Math.max(20, (h * 0.78 / (h * 0.78 + maxScroll)) * (clipBottom - clipTop));
+      const indicatorY = clipTop + (this.scrollOffset / maxScroll) * (clipBottom - clipTop - indicatorHeight);
+      ctx.fillStyle = COLORS.gold;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(w - 4 * scale, indicatorY, 3 * scale, indicatorHeight);
+      ctx.globalAlpha = 1;
+    }
+
     // Bottom quote
     ctx.globalAlpha = 0.5;
-    drawText(ctx, '"No one mourns the wicked"', w / 2, h * 0.94, 10 * scale, '#aaa');
+    drawText(ctx, '"No one mourns the wicked"', w / 2, h * 0.98, 9 * scale, '#aaa');
     ctx.globalAlpha = 1;
   }
 }

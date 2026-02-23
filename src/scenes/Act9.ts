@@ -1,7 +1,7 @@
 // Act 9 — 'Finale (For Good Reprise)' — Rhythm Tap
 // Musical notes fall gently in 3 columns. Tap when they reach the glowing zone!
 // Designed to be fun and forgiving for a child.
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawText, drawElphaba, drawGlinda, drawHealth, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
@@ -281,7 +281,7 @@ export class Act9Scene implements Scene {
     if (accuracy >= 0.80) stars++;
     game.state.stars.act9 = Math.max(game.state.stars.act9 || 0, stars);
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act9') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act9')) {
       game.state.lastCompletedAct = 'act9';
     }
     game.saveGame();
@@ -294,8 +294,10 @@ export class Act9Scene implements Scene {
       }, i * 150);
     }
 
+    game.state.currentAct = 'act10';
+    game.state.storyCardIndex = 0;
     setTimeout(() => {
-      game.transitionTo('victory');
+      game.transitionTo('storyCard');
     }, 3500);
   }
 

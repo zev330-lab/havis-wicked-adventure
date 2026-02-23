@@ -1,6 +1,6 @@
 // Act 8 — 'What Is This Feeling?' — Tap to Zap
 // Enemies approach from both sides. Tap them to zap! Elphaba zaps left, Glinda zaps right.
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawText, drawElphaba, drawGlinda, drawHealth, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
@@ -272,7 +272,7 @@ export class Act8Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act8') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act8')) {
       game.state.lastCompletedAct = 'act8';
     }
     game.saveGame();

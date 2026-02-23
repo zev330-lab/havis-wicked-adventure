@@ -1,6 +1,6 @@
 // Act 7 — 'The Wizard and I' — Magic Bubble Float
 // Hold to float up, release to drift down. Steer left/right. Collect gems, dodge clouds.
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawText, drawGem, drawHealth, COLORS, drawElphaba, drawGlinda } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
@@ -298,7 +298,7 @@ export class Act7Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act7') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act7')) {
       game.state.lastCompletedAct = 'act7';
     }
     game.saveGame();

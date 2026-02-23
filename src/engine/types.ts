@@ -1,7 +1,16 @@
 // Core type definitions for Havi's Wicked Adventure
 
 export type Character = 'elphaba' | 'glinda';
-export type ActId = 'act1' | 'act2' | 'act3' | 'act4' | 'act5' | 'act6' | 'act7' | 'act8' | 'act9';
+export type ActId = 'act1' | 'act2' | 'act3' | 'act4' | 'act5' | 'act6' | 'act7' | 'act8' | 'act9' | 'act10' | 'act11' | 'act12' | 'act13' | 'act14' | 'act15';
+
+export const ACT_ORDER: ActId[] = [
+  'act1', 'act2', 'act3', 'act4', 'act5', 'act6', 'act7', 'act8', 'act9',
+  'act10', 'act11', 'act12', 'act13', 'act14', 'act15',
+];
+
+export function actIndex(id: ActId): number {
+  return ACT_ORDER.indexOf(id);
+}
 export type SceneId = 'splash' | 'characterSelect' | 'levelSelect' | 'storyCard' | 'gameplay' | 'victory' | 'pause';
 
 export interface Vec2 {

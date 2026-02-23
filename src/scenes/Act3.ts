@@ -1,6 +1,6 @@
 // Act 3 — 'For Good' — Boss/Finale
 // Face the Wizard's magic machine, dodge projectiles, reflect them back
-import { Scene, GameEngine } from '../engine/types';
+import { Scene, GameEngine, actIndex } from '../engine/types';
 import {
   drawSky, drawElphaba, drawGlinda, drawHUD, drawText, COLORS,
 } from '../engine/renderer';
@@ -449,7 +449,7 @@ export class Act3Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act3') {
+    if (!game.state.lastCompletedAct || actIndex(game.state.lastCompletedAct) < actIndex('act3')) {
       game.state.lastCompletedAct = 'act3';
     }
     game.saveGame();
