@@ -60,7 +60,7 @@ function createInitialState(): GameState {
 }
 
 // Pause button layout constants
-const PAUSE_BTN_SIZE = 32;
+const PAUSE_BTN_SIZE = 36;
 const PAUSE_BTN_MARGIN = 12;
 
 export class Game implements GameEngine {
@@ -293,20 +293,35 @@ export class Game implements GameEngine {
     const btn = this.getPauseBtnBounds();
     const scale = this.getScale();
 
-    // Semi-transparent background circle
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    ctx.beginPath();
-    ctx.arc(btn.x + btn.w / 2, btn.y + btn.h / 2, btn.w / 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Pause bars
-    ctx.fillStyle = COLORS.gold;
-    const barW = 4 * scale;
-    const barH = 14 * scale;
+    // Semi-transparent background rounded rect
     const cx = btn.x + btn.w / 2;
     const cy = btn.y + btn.h / 2;
-    ctx.fillRect(cx - barW - 2 * scale, cy - barH / 2, barW, barH);
-    ctx.fillRect(cx + 2 * scale, cy - barH / 2, barW, barH);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, btn.w / 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hamburger icon (3 horizontal lines)
+    ctx.fillStyle = COLORS.gold;
+    const lineW = 14 * scale;
+    const lineH = 2 * scale;
+    const lineGap = 4 * scale;
+    const iconTop = cy - lineGap - lineH / 2;
+    for (let i = 0; i < 3; i++) {
+      const ly = iconTop + i * lineGap;
+      ctx.beginPath();
+      ctx.roundRect(cx - lineW / 2, ly, lineW, lineH, lineH / 2);
+      ctx.fill();
+    }
+
+    // "MENU" label below the button
+    ctx.fillStyle = COLORS.gold;
+    ctx.font = `bold ${7 * scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.globalAlpha = 0.8;
+    ctx.fillText('MENU', cx, btn.y + btn.h + 2 * scale);
+    ctx.globalAlpha = 1;
   }
 
   private renderPauseOverlay(ctx: CanvasRenderingContext2D) {

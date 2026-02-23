@@ -87,7 +87,7 @@ export class LevelSelectScene implements Scene {
       } else {
         // Continue drag
         const deltaY = game.input.touchY - this.lastTouchY;
-        this.dragDistance += Math.abs(game.input.touchY - this.dragStartY);
+        this.dragDistance = Math.abs(game.input.touchY - this.dragStartY);
         this.scrollOffset = this.dragStartScroll - (game.input.touchY - this.dragStartY);
         this.scrollVelocity = -deltaY / Math.max(dt, 0.016);
         this.lastTouchY = game.input.touchY;
@@ -129,13 +129,9 @@ export class LevelSelectScene implements Scene {
     }
   }
 
-  private isActLocked(game: GameEngine, actId: ActId): boolean {
-    if (actId === 'act1') return false;
-    const prev = game.state.lastCompletedAct;
-    if (!prev) return true;
-    const ai = actIndex(actId);
-    const ci = actIndex(prev);
-    return ci < ai - 1;
+  private isActLocked(_game: GameEngine, _actId: ActId): boolean {
+    // All levels always accessible
+    return false;
   }
 
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {

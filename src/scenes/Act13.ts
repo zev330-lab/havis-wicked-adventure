@@ -1,5 +1,5 @@
 // Act 13 — 'As Long As You're Mine' — Pair Flight
-// Both Elphaba and Glinda fly upward; player controls Elphaba, Glinda mirrors
+// Both Elphaba and Glinda fly upward together following the player's finger
 import { Scene, GameEngine, actIndex } from '../engine/types';
 import { drawText, drawElphaba, drawGlinda, drawGem, drawHUD, drawHealth, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
@@ -152,45 +152,51 @@ export class Act13Scene implements Scene {
     const h = game.height;
     const centerX = w * 0.5;
 
-    // Player movement — drag to move Elphaba
+    // Player movement — both characters follow finger together with horizontal offset
+    const pairOffset = 50 * (w / 390); // scaled horizontal offset between characters
+
     if (game.input.isTouching) {
       const targetX = game.input.touchX;
       const targetY = game.input.touchY;
 
-      // Smoothly follow touch for Elphaba (constrain to left half mostly)
-      const maxElphabaX = centerX - 15;
-      const newEX = Math.max(25, Math.min(maxElphabaX, this.elphabaX + (targetX - this.elphabaX) * Math.min(1, dt * 10)));
-      const newEY = Math.max(80, Math.min(h - 50, this.elphabaY + (targetY - this.elphabaY) * Math.min(1, dt * 10)));
+      // Smoothly follow touch — compute center point between both characters
+      const pairCenterX = (this.elphabaX + this.glindaX) / 2;
+      const pairCenterY = (this.elphabaY + this.glindaY) / 2;
+      const newCX = pairCenterX + (targetX - pairCenterX) * Math.min(1, dt * 10);
+      const newCY = pairCenterY + (targetY - pairCenterY) * Math.min(1, dt * 10);
 
-      // Calculate delta from Elphaba's default position
-      const deltaX = newEX - this.elphabaX;
-      const deltaY = newEY - this.elphabaY;
+      // Clamp so neither character goes off-screen
+      const clampedCX = Math.max(25 + pairOffset, Math.min(w - 25 - pairOffset, newCX));
+      const clampedCY = Math.max(80, Math.min(h - 50, newCY));
 
-      this.elphabaX = newEX;
-      this.elphabaY = newEY;
-
-      // Mirror Glinda: horizontal mirror, vertical same
-      const minGlindaX = centerX + 15;
-      this.glindaX = Math.max(minGlindaX, Math.min(w - 25, this.glindaX - deltaX));
-      this.glindaY = Math.max(80, Math.min(h - 50, this.glindaY + deltaY));
+      this.elphabaX = clampedCX - pairOffset;
+      this.glindaX = clampedCX + pairOffset;
+      this.elphabaY = clampedCY;
+      this.glindaY = clampedCY;
     }
 
-    // Keyboard fallback
+    // Keyboard fallback — both move together
     if (game.input.left) {
-      this.elphabaX = Math.max(25, this.elphabaX - 200 * dt);
-      this.glindaX = Math.min(w - 25, this.glindaX + 200 * dt);
+      const shift = 200 * dt;
+      const newEX = Math.max(25, this.elphabaX - shift);
+      this.elphabaX = newEX;
+      this.glindaX = newEX + pairOffset * 2;
     }
     if (game.input.right) {
-      this.elphabaX = Math.min(centerX - 15, this.elphabaX + 200 * dt);
-      this.glindaX = Math.max(centerX + 15, this.glindaX - 200 * dt);
+      const shift = 200 * dt;
+      const newGX = Math.min(w - 25, this.glindaX + shift);
+      this.glindaX = newGX;
+      this.elphabaX = newGX - pairOffset * 2;
     }
     if (game.input.up) {
-      this.elphabaY = Math.max(80, this.elphabaY - 200 * dt);
-      this.glindaY = Math.max(80, this.glindaY - 200 * dt);
+      const newY = Math.max(80, this.elphabaY - 200 * dt);
+      this.elphabaY = newY;
+      this.glindaY = newY;
     }
     if (game.input.down) {
-      this.elphabaY = Math.min(h - 50, this.elphabaY + 200 * dt);
-      this.glindaY = Math.min(h - 50, this.glindaY + 200 * dt);
+      const newY = Math.min(h - 50, this.elphabaY + 200 * dt);
+      this.elphabaY = newY;
+      this.glindaY = newY;
     }
 
     // Spawn clouds
@@ -365,47 +371,37 @@ export class Act13Scene implements Scene {
 
   private spawnCloud(game: GameEngine) {
     const w = game.width;
-    const centerX = w * 0.5;
 
-    // Create two clouds (one for each side) with guaranteed gaps
-    const sides: Array<'left' | 'right'> = ['left', 'right'];
-    for (const side of sides) {
-      const halfW = centerX;
+    // Spawn 1-2 clouds across full width, leaving a navigable gap near the pair
+    const pairCenterX = (this.elphabaX + this.glindaX) / 2;
+    const gapSize = 90; // gap wide enough for both characters to pass
+    const cloudCount = Math.random() < 0.4 ? 2 : 1;
+
+    for (let i = 0; i < cloudCount; i++) {
       const cloudW = 60 + Math.random() * 80;
-      const gapSize = 70; // guaranteed gap for character passage
+
+      // Pick a random x, but avoid the gap around the pair center
       let x: number;
-
-      if (side === 'left') {
-        // Cloud on left half, leaving a gap
-        const gapCenter = this.elphabaX || this.baseElphabaX;
-        // Place cloud away from a safe corridor
-        if (Math.random() < 0.5) {
-          x = Math.random() * (gapCenter - gapSize - cloudW * 0.5);
-        } else {
-          x = gapCenter + gapSize + Math.random() * (halfW - gapCenter - gapSize);
-        }
-        x = Math.max(cloudW * 0.5, Math.min(halfW - 10, x));
+      if (Math.random() < 0.5) {
+        // Place left of gap
+        x = cloudW * 0.5 + Math.random() * Math.max(0, pairCenterX - gapSize - cloudW * 0.5);
       } else {
-        const gapCenter = this.glindaX || this.baseGlindaX;
-        if (Math.random() < 0.5) {
-          x = centerX + Math.random() * (gapCenter - centerX - gapSize);
-        } else {
-          x = gapCenter + gapSize + Math.random() * (w - gapCenter - gapSize - cloudW * 0.5);
-        }
-        x = Math.max(centerX + 10, Math.min(w - cloudW * 0.5, x));
+        // Place right of gap
+        const rightStart = pairCenterX + gapSize;
+        x = rightStart + Math.random() * Math.max(0, w - rightStart - cloudW * 0.5);
       }
+      x = Math.max(cloudW * 0.5, Math.min(w - cloudW * 0.5, x));
 
-      // Only spawn ~60% of the time per side to not overwhelm
-      if (Math.random() < 0.6) {
-        this.clouds.push({
-          x,
-          y: -40,
-          w: cloudW,
-          h: 20 + Math.random() * 15,
-          side,
-          speed: this.scrollSpeed + (Math.random() - 0.5) * 20,
-        });
-      }
+      const side: 'left' | 'right' = x < w * 0.5 ? 'left' : 'right';
+
+      this.clouds.push({
+        x,
+        y: -40,
+        w: cloudW,
+        h: 20 + Math.random() * 15,
+        side,
+        speed: this.scrollSpeed + (Math.random() - 0.5) * 20,
+      });
     }
   }
 
@@ -436,11 +432,8 @@ export class Act13Scene implements Scene {
 
   private spawnGem(game: GameEngine) {
     const w = game.width;
-    const centerX = w * 0.5;
-    const side: 'left' | 'right' = Math.random() < 0.5 ? 'left' : 'right';
-    const x = side === 'left'
-      ? 30 + Math.random() * (centerX - 60)
-      : centerX + 30 + Math.random() * (centerX - 60);
+    const x = 30 + Math.random() * (w - 60);
+    const side: 'left' | 'right' = x < w * 0.5 ? 'left' : 'right';
 
     this.gems.push({
       x,
@@ -574,9 +567,8 @@ export class Act13Scene implements Scene {
     if (game.state.levelTime < 5) {
       const alpha = Math.max(0, 1 - game.state.levelTime / 5);
       ctx.globalAlpha = alpha;
-      drawText(ctx, 'Drag to fly Elphaba!', w * 0.3, h * 0.55, 12 * scale, COLORS.emeraldGlow);
-      drawText(ctx, 'Glinda mirrors you!', w * 0.7, h * 0.55, 12 * scale, COLORS.pinkGlow);
-      drawText(ctx, 'Dodge the clouds together!', w / 2, h * 0.6, 11 * scale, '#ccc');
+      drawText(ctx, 'Drag to fly together!', w / 2, h * 0.55, 12 * scale, COLORS.gold);
+      drawText(ctx, 'Dodge the clouds!', w / 2, h * 0.6, 11 * scale, '#ccc');
       ctx.globalAlpha = 1;
     }
 
