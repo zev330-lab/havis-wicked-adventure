@@ -153,7 +153,7 @@ export class Act13Scene implements Scene {
     const centerX = w * 0.5;
 
     // Player movement — both characters follow finger together with horizontal offset
-    const pairOffset = 50 * (w / 390); // scaled horizontal offset between characters
+    const pairOffset = 25 * (w / 390); // scaled horizontal offset between characters
 
     if (game.input.isTouching) {
       const targetX = game.input.touchX;
