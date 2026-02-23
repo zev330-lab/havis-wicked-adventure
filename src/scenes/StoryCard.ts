@@ -113,6 +113,57 @@ const storyCards: Record<string, StoryCard[]> = {
       bgBottom: '#0a1500',
     },
   ],
+  act7_intro: [
+    {
+      title: 'Act Seven',
+      lines: [
+        '"The Wizard and I"',
+        '',
+        'Havi, deep below the palace',
+        'lies the Wizard\'s secret shaft!',
+        'Flip your gravity to survive',
+        'and collect the enchanted gems.',
+        '',
+        'Tap to flip — don\'t hit the walls!',
+      ],
+      bgTop: '#0a0015',
+      bgBottom: '#0f0a00',
+    },
+  ],
+  act8_intro: [
+    {
+      title: 'Act Eight',
+      lines: [
+        '"What Is This Feeling?"',
+        '',
+        'Elphaba and Glinda need YOU!',
+        'Enemies approach from both sides.',
+        'Touch the left to help Elphaba,',
+        'touch the right to help Glinda.',
+        '',
+        'Protect them both, Havi!',
+      ],
+      bgTop: '#0a001a',
+      bgBottom: '#001a0a',
+    },
+  ],
+  act9_intro: [
+    {
+      title: 'Act Nine',
+      lines: [
+        '"For Good — Finale"',
+        '',
+        'The final performance, Havi!',
+        'Musical notes fall in 3 columns.',
+        'Tap the right column as each note',
+        'reaches the glowing line!',
+        '',
+        'This is your moment!',
+      ],
+      bgTop: '#150030',
+      bgBottom: '#08001a',
+    },
+  ],
 };
 
 export class StoryCardScene implements Scene {

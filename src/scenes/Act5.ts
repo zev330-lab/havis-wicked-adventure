@@ -5,7 +5,6 @@ import { drawText, COLORS } from '../engine/renderer';
 import { particlePresets } from '../engine/particles';
 import { startBgMusic, stopBgMusic } from '../engine/audio';
 
-const CELL = 28;
 const COLS = 15;
 const ROWS = 19;
 
@@ -54,13 +53,20 @@ export class Act5Scene implements Scene {
   private trailTimer = 0;
   private noteTimer = 0;
   private sparkleTimer = 0;
-  private levelW = COLS * CELL;
-  private levelH = ROWS * CELL;
+  private cell = 28;
+  private levelW = COLS * 28;
+  private levelH = ROWS * 28;
 
   enter(game: GameEngine) {
+    // Scale cell size so maze fills the screen
+    // Use the larger dimension to ensure maze is at least as big as screen
+    this.cell = Math.max(Math.ceil(game.width / COLS), Math.ceil(game.height / ROWS));
+    this.levelW = COLS * this.cell;
+    this.levelH = ROWS * this.cell;
+
     // Start position (row 1, col 1)
-    this.playerX = 1.5 * CELL;
-    this.playerY = 1.5 * CELL;
+    this.playerX = 1.5 * this.cell;
+    this.playerY = 1.5 * this.cell;
     this.cameraX = 0;
     this.cameraY = 0;
     this.doorOpen = false;
@@ -87,6 +93,7 @@ export class Act5Scene implements Scene {
 
   private placeGems() {
     this.gems = [];
+    this.totalGems = 0;
     // Place gems at specific open cells throughout the maze
     const gemSpots: [number, number][] = [
       [1, 5], [1, 9], [2, 3], [3, 7], [3, 13],
@@ -95,8 +102,8 @@ export class Act5Scene implements Scene {
     ];
     for (const [r, c] of gemSpots) {
       this.gems.push({
-        x: (c + 0.5) * CELL,
-        y: (r + 0.5) * CELL,
+        x: (c + 0.5) * this.cell,
+        y: (r + 0.5) * this.cell,
         collected: false,
         row: r,
         col: c,
@@ -154,43 +161,43 @@ export class Act5Scene implements Scene {
       const time = game.time;
 
       // Wall collision — try X then Y independently (slide along walls)
-      const colX = Math.floor(nx / CELL);
-      const rowY = Math.floor(this.playerY / CELL);
-      const colCur = Math.floor(this.playerX / CELL);
-      const rowN = Math.floor(ny / CELL);
+      const colX = Math.floor(nx / this.cell);
+      const rowY = Math.floor(this.playerY / this.cell);
+      const colCur = Math.floor(this.playerX / this.cell);
+      const rowN = Math.floor(ny / this.cell);
 
       // Check X movement
       if (dx > 0) {
         // Moving right — check right edge
-        const checkCol = Math.floor((nx + r) / CELL);
-        const checkRow1 = Math.floor((this.playerY - r + 2) / CELL);
-        const checkRow2 = Math.floor((this.playerY + r - 2) / CELL);
+        const checkCol = Math.floor((nx + r) / this.cell);
+        const checkRow1 = Math.floor((this.playerY - r + 2) / this.cell);
+        const checkRow2 = Math.floor((this.playerY + r - 2) / this.cell);
         if (this.isWallSolid(checkRow1, checkCol, time) || this.isWallSolid(checkRow2, checkCol, time)) {
-          nx = checkCol * CELL - r - 0.1;
+          nx = checkCol * this.cell - r - 0.1;
         }
       } else if (dx < 0) {
-        const checkCol = Math.floor((nx - r) / CELL);
-        const checkRow1 = Math.floor((this.playerY - r + 2) / CELL);
-        const checkRow2 = Math.floor((this.playerY + r - 2) / CELL);
+        const checkCol = Math.floor((nx - r) / this.cell);
+        const checkRow1 = Math.floor((this.playerY - r + 2) / this.cell);
+        const checkRow2 = Math.floor((this.playerY + r - 2) / this.cell);
         if (this.isWallSolid(checkRow1, checkCol, time) || this.isWallSolid(checkRow2, checkCol, time)) {
-          nx = (checkCol + 1) * CELL + r + 0.1;
+          nx = (checkCol + 1) * this.cell + r + 0.1;
         }
       }
 
       // Check Y movement
       if (dy > 0) {
-        const checkRow = Math.floor((ny + r) / CELL);
-        const checkCol1 = Math.floor((nx - r + 2) / CELL);
-        const checkCol2 = Math.floor((nx + r - 2) / CELL);
+        const checkRow = Math.floor((ny + r) / this.cell);
+        const checkCol1 = Math.floor((nx - r + 2) / this.cell);
+        const checkCol2 = Math.floor((nx + r - 2) / this.cell);
         if (this.isWallSolid(checkRow, checkCol1, time) || this.isWallSolid(checkRow, checkCol2, time)) {
-          ny = checkRow * CELL - r - 0.1;
+          ny = checkRow * this.cell - r - 0.1;
         }
       } else if (dy < 0) {
-        const checkRow = Math.floor((ny - r) / CELL);
-        const checkCol1 = Math.floor((nx - r + 2) / CELL);
-        const checkCol2 = Math.floor((nx + r - 2) / CELL);
+        const checkRow = Math.floor((ny - r) / this.cell);
+        const checkCol1 = Math.floor((nx - r + 2) / this.cell);
+        const checkCol2 = Math.floor((nx + r - 2) / this.cell);
         if (this.isWallSolid(checkRow, checkCol1, time) || this.isWallSolid(checkRow, checkCol2, time)) {
-          ny = (checkRow + 1) * CELL + r + 0.1;
+          ny = (checkRow + 1) * this.cell + r + 0.1;
         }
       }
 
@@ -227,8 +234,8 @@ export class Act5Scene implements Scene {
 
     // Check if player reached the exit door
     if (this.doorOpen) {
-      const doorX = (this.doorCol + 0.5) * CELL;
-      const doorY = (this.doorRow + 0.5) * CELL;
+      const doorX = (this.doorCol + 0.5) * this.cell;
+      const doorY = (this.doorRow + 0.5) * this.cell;
       const ddx = doorX - this.playerX;
       const ddy = doorY - this.playerY;
       if (ddx * ddx + ddy * ddy < 20 * 20) {
@@ -311,25 +318,25 @@ export class Act5Scene implements Scene {
     // Draw floor tiles
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
-        const x = c * CELL;
-        const y = r * CELL;
+        const x = c * this.cell;
+        const y = r * this.cell;
         // Skip if off screen
-        if (x + CELL < cx || x > cx + w || y + CELL < cy || y > cy + h) continue;
+        if (x + this.cell < cx || x > cx + w || y + this.cell < cy || y > cy + h) continue;
 
         const cell = MAZE_DATA[r][c];
 
         if (cell === 0) {
           // Floor tile — checkerboard
           ctx.fillStyle = (r + c) % 2 === 0 ? '#0d2a18' : '#0a2214';
-          ctx.fillRect(x, y, CELL, CELL);
+          ctx.fillRect(x, y, this.cell, this.cell);
         } else if (cell === 1) {
           // Solid wall
           ctx.fillStyle = '#2a1a0a';
-          ctx.fillRect(x, y, CELL, CELL);
+          ctx.fillRect(x, y, this.cell, this.cell);
           // Gold trim
           ctx.strokeStyle = 'rgba(255, 215, 0, 0.2)';
           ctx.lineWidth = 1;
-          ctx.strokeRect(x + 1, y + 1, CELL - 2, CELL - 2);
+          ctx.strokeRect(x + 1, y + 1, this.cell - 2, this.cell - 2);
         } else if (cell === 2) {
           // Magic wall
           const solid = Math.floor(t / 5) % 2 === 0;
@@ -341,10 +348,10 @@ export class Act5Scene implements Scene {
             ctx.fillStyle = isElphaba
               ? `rgba(0, 180, 80, ${alpha})`
               : `rgba(200, 80, 180, ${alpha})`;
-            ctx.fillRect(x, y, CELL, CELL);
+            ctx.fillRect(x, y, this.cell, this.cell);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
             ctx.lineWidth = 1;
-            ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+            ctx.strokeRect(x + 2, y + 2, this.cell - 4, this.cell - 4);
           } else {
             // Open — faint outline
             const alpha = warning ? 0.1 + Math.sin(t * 12) * 0.05 : 0.08;
@@ -353,11 +360,11 @@ export class Act5Scene implements Scene {
               : `rgba(200, 80, 180, ${alpha})`;
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 3]);
-            ctx.strokeRect(x + 2, y + 2, CELL - 4, CELL - 4);
+            ctx.strokeRect(x + 2, y + 2, this.cell - 4, this.cell - 4);
             ctx.setLineDash([]);
             // Floor beneath
             ctx.fillStyle = (r + c) % 2 === 0 ? '#0d2a18' : '#0a2214';
-            ctx.fillRect(x, y, CELL, CELL);
+            ctx.fillRect(x, y, this.cell, this.cell);
           }
         }
       }
@@ -397,29 +404,29 @@ export class Act5Scene implements Scene {
     }
 
     // Exit door
-    const doorX = this.doorCol * CELL;
-    const doorY = this.doorRow * CELL;
+    const doorX = this.doorCol * this.cell;
+    const doorY = this.doorRow * this.cell;
     if (this.doorOpen) {
       // Golden open door
       const pulse = Math.sin(t * 3) * 0.15 + 0.85;
       ctx.fillStyle = `rgba(255, 215, 0, ${pulse * 0.4})`;
-      ctx.fillRect(doorX, doorY, CELL, CELL);
+      ctx.fillRect(doorX, doorY, this.cell, this.cell);
       ctx.strokeStyle = COLORS.gold;
       ctx.lineWidth = 2;
-      ctx.strokeRect(doorX + 2, doorY + 2, CELL - 4, CELL - 4);
+      ctx.strokeRect(doorX + 2, doorY + 2, this.cell - 4, this.cell - 4);
       // Archway
       ctx.beginPath();
-      ctx.arc(doorX + CELL / 2, doorY + CELL * 0.6, CELL * 0.4, Math.PI, 0);
+      ctx.arc(doorX + this.cell / 2, doorY + this.cell * 0.6, this.cell * 0.4, Math.PI, 0);
       ctx.strokeStyle = COLORS.gold;
       ctx.lineWidth = 2;
       ctx.stroke();
     } else {
       // Locked door
       ctx.fillStyle = 'rgba(100, 80, 60, 0.6)';
-      ctx.fillRect(doorX, doorY, CELL, CELL);
+      ctx.fillRect(doorX, doorY, this.cell, this.cell);
       ctx.strokeStyle = '#666';
       ctx.lineWidth = 1;
-      ctx.strokeRect(doorX + 2, doorY + 2, CELL - 4, CELL - 4);
+      ctx.strokeRect(doorX + 2, doorY + 2, this.cell - 4, this.cell - 4);
     }
 
     // Player — top-down circle
@@ -541,8 +548,8 @@ export class Act5Scene implements Scene {
     }
 
     // Player on minimap
-    const pCol = Math.floor(this.playerX / CELL);
-    const pRow = Math.floor(this.playerY / CELL);
+    const pCol = Math.floor(this.playerX / this.cell);
+    const pRow = Math.floor(this.playerY / this.cell);
     ctx.fillStyle = '#fff';
     ctx.fillRect(mapX + pCol * mapScale, mapY + pRow * mapScale, mapScale, mapScale);
   }

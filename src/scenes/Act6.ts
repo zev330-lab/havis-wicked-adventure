@@ -409,8 +409,10 @@ export class Act6Scene implements Scene {
       }, i * 200);
     }
 
+    game.state.currentAct = 'act7';
+    game.state.storyCardIndex = 0;
     setTimeout(() => {
-      game.transitionTo('victory');
+      game.transitionTo('storyCard');
     }, 2500);
   }
 

@@ -36,6 +36,7 @@ const A4 = 440.00, B4 = 493.88, C5 = 523.25, D5 = 587.33, E5 = 659.25;
 const F5 = 698.46, G5 = 783.99, A5 = 880.00;
 const Eb4 = 311.13, Bb4 = 466.16, Ab4 = 415.30;
 const Eb5 = 622.25, Bb3 = 233.08, G3 = 196.00;
+const Db4 = 277.18, Gb4 = 369.99;
 
 export function initAudio() {
   getCtx();
@@ -253,6 +254,37 @@ export const sounds: Record<string, () => void> = {
       playNote(n, 0.25, 'triangle', 0.1, i * 0.1);
     });
   },
+
+  gravityFlip() {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.1);
+    osc.frequency.exponentialRampToValueAtTime(500, ctx.currentTime + 0.22);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  },
+
+  rhythmPerfect() {
+    playNote(C5, 0.08, 'triangle', 0.2);
+    playNote(E5, 0.1, 'triangle', 0.18, 0.06);
+    playNote(G5, 0.15, 'triangle', 0.15, 0.12);
+  },
+
+  rhythmGood() {
+    playNote(G4, 0.15, 'triangle', 0.12);
+  },
+
+  characterSwitch() {
+    playNote(A4, 0.07, 'sine', 0.1);
+    playNote(Bb4, 0.07, 'sine', 0.1, 0.05);
+  },
 };
 
 // Background music system
@@ -349,6 +381,39 @@ const bgMusicPatterns: Record<string, { notes: number[][]; tempo: number; type: 
     tempo: 160,
     type: 'sawtooth',
     vol: 0.03,
+  },
+  wizard: {
+    notes: [
+      [F4, C4], [0], [A4], [0],
+      [C5], [Bb4], [A4], [0],
+      [G4, C4], [0], [F4], [0],
+      [A4], [G4], [F4], [C4],
+    ],
+    tempo: 240,
+    type: 'square',
+    vol: 0.03,
+  },
+  feeling: {
+    notes: [
+      [Bb3, F4], [0], [Db4], [Eb4],
+      [F4, Bb3], [Ab4], [Gb4], [0],
+      [Eb4, Bb3], [0], [F4], [0],
+      [Bb4], [Ab4], [Gb4], [Eb4],
+    ],
+    tempo: 190,
+    type: 'sine',
+    vol: 0.035,
+  },
+  finale: {
+    notes: [
+      [G4, B4], [D5], [0], [G5],
+      [0], [E5], [D5], [0],
+      [C5, E4], [0], [B4], [D5],
+      [G4, D4], [0], [0], [0],
+    ],
+    tempo: 130,
+    type: 'triangle',
+    vol: 0.04,
   },
 };
 
