@@ -1,7 +1,7 @@
 // Core type definitions for Havi's Wicked Adventure
 
 export type Character = 'elphaba' | 'glinda';
-export type ActId = 'act1' | 'act2' | 'act3';
+export type ActId = 'act1' | 'act2' | 'act3' | 'act4' | 'act5' | 'act6';
 export type SceneId = 'splash' | 'characterSelect' | 'levelSelect' | 'storyCard' | 'gameplay' | 'victory' | 'pause';
 
 export interface Vec2 {

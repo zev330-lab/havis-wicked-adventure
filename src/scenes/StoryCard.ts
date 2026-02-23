@@ -61,6 +61,58 @@ const storyCards: Record<string, StoryCard[]> = {
       bgBottom: '#002a10',
     },
   ],
+  act4_intro: [
+    {
+      title: 'Act Four',
+      lines: [
+        '"Popular"',
+        '',
+        'The Ozians want to celebrate!',
+        'Havi, it\'s time for the stage!',
+        'Catch the falling treasures',
+        'and become the most popular',
+        'witch in all of Oz!',
+        '',
+        'The spotlight is yours!',
+      ],
+      bgTop: '#2a0030',
+      bgBottom: '#1a0020',
+    },
+  ],
+  act5_intro: [
+    {
+      title: 'Act Five',
+      lines: [
+        '"Dancing Through Life"',
+        '',
+        'Deep in the Emerald Palace,',
+        'a grand ballroom awaits!',
+        'Find all the hidden dance gems',
+        'and unlock the golden door.',
+        '',
+        'Watch for the magic walls, Havi!',
+      ],
+      bgTop: '#0a1a10',
+      bgBottom: '#001a0d',
+    },
+  ],
+  act6_intro: [
+    {
+      title: 'Act Six',
+      lines: [
+        '"No One Mourns the Wicked"',
+        '',
+        'The palace is crumbling!',
+        'Havi, you must escape!',
+        'Climb up through the towers',
+        'and reach the rooftop.',
+        '',
+        'Don\'t look down... GO!',
+      ],
+      bgTop: '#1a0a00',
+      bgBottom: '#0a1500',
+    },
+  ],
 };
 
 export class StoryCardScene implements Scene {

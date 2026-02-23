@@ -226,6 +226,33 @@ export const sounds: Record<string, () => void> = {
     playNote(G4, 0.1, 'square', 0.08);
     playNote(C5, 0.2, 'square', 0.06, 0.1);
   },
+
+  catchItem() {
+    playNote(A5, 0.1, 'sine', 0.18);
+    playNote(C5 * 2, 0.15, 'sine', 0.14, 0.06);
+  },
+
+  crumble() {
+    const ctx = getCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(200, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.3);
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.4);
+  },
+
+  doorOpen() {
+    const notes = [C4, E4, G4, C5];
+    notes.forEach((n, i) => {
+      playNote(n, 0.25, 'triangle', 0.1, i * 0.1);
+    });
+  },
 };
 
 // Background music system
@@ -287,6 +314,41 @@ const bgMusicPatterns: Record<string, { notes: number[][]; tempo: number; type: 
     tempo: 300,
     type: 'sine',
     vol: 0.035,
+  },
+  popular: {
+    notes: [
+      [E5, C4], [G5], [A5, E4], [G5],
+      [E5], [C5, G4], [D5], [E5],
+      [F5, A4], [E5], [D5, G4], [C5],
+      [E5, C4], [G5], [A5], [0],
+    ],
+    tempo: 180,
+    type: 'sine',
+    vol: 0.04,
+  },
+  dance: {
+    notes: [
+      [C5, E4], [0], [G4],
+      [A4, C5], [0], [E4],
+      [F4, A4], [0], [C5],
+      [G4, B4], [0], [D5],
+      [C5, E4], [0], [G4],
+      [A4], [0], [0],
+    ],
+    tempo: 280,
+    type: 'triangle',
+    vol: 0.035,
+  },
+  escape: {
+    notes: [
+      [Eb4, Bb3], [Eb4], [G4], [Eb4],
+      [Ab4, Eb4], [G4], [Bb4], [Ab4],
+      [G4, Eb4], [Bb4], [Eb5], [Bb4],
+      [Ab4], [G4], [Eb4], [0],
+    ],
+    tempo: 160,
+    type: 'sawtooth',
+    vol: 0.03,
   },
 };
 

@@ -170,7 +170,7 @@ export class VictoryScene implements Scene {
       // Total score
       const totalStars = Object.values(game.state.stars).reduce((a, b) => a + b, 0);
       drawText(ctx, `Total Score: ${game.state.score}`, w / 2, h * 0.78, 16 * scale, COLORS.gold);
-      drawText(ctx, `Stars Earned: ${totalStars} / 9`, w / 2, h * 0.83, 14 * scale, '#ddd');
+      drawText(ctx, `Stars Earned: ${totalStars} / 18`, w / 2, h * 0.83, 14 * scale, '#ddd');
 
       // Stars display
       for (let i = 0; i < totalStars; i++) {

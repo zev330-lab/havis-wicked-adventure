@@ -17,6 +17,9 @@ import { StoryCardScene } from '../scenes/StoryCard';
 import { Act1Scene } from '../scenes/Act1';
 import { Act2Scene } from '../scenes/Act2';
 import { Act3Scene } from '../scenes/Act3';
+import { Act4Scene } from '../scenes/Act4';
+import { Act5Scene } from '../scenes/Act5';
+import { Act6Scene } from '../scenes/Act6';
 import { VictoryScene } from '../scenes/Victory';
 
 const SAVE_KEY = 'havis-wicked-adventure-save';
@@ -30,7 +33,7 @@ function createInitialState(): GameState {
     gems: 0,
     health: 3,
     maxHealth: 3,
-    stars: { act1: 0, act2: 0, act3: 0 },
+    stars: { act1: 0, act2: 0, act3: 0, act4: 0, act5: 0, act6: 0 },
     unlockedCostumes: [],
     lastCompletedAct: null,
     storyCardIndex: 0,
@@ -246,6 +249,15 @@ export class Game implements GameEngine {
           break;
         case 'act3':
           this.scenes.set('gameplay', new Act3Scene());
+          break;
+        case 'act4':
+          this.scenes.set('gameplay', new Act4Scene());
+          break;
+        case 'act5':
+          this.scenes.set('gameplay', new Act5Scene());
+          break;
+        case 'act6':
+          this.scenes.set('gameplay', new Act6Scene());
           break;
       }
     }

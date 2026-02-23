@@ -449,12 +449,23 @@ export class Act3Scene implements Scene {
       game.state.unlockedCostumes.push(game.state.character === 'elphaba' ? 'elphaba_sparkly' : 'glinda_wings');
     }
 
-    game.state.lastCompletedAct = 'act3';
+    if (!game.state.lastCompletedAct || game.state.lastCompletedAct < 'act3') {
+      game.state.lastCompletedAct = 'act3';
+    }
     game.saveGame();
+    game.playSound('actComplete');
+
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        game.spawnParticles(particlePresets.confetti(Math.random() * game.width, game.height * 0.3));
+      }, i * 200);
+    }
 
     setTimeout(() => {
-      game.transitionTo('victory');
-    }, 1500);
+      game.state.currentAct = 'act4';
+      game.state.storyCardIndex = 0;
+      game.transitionTo('storyCard');
+    }, 2500);
   }
 
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {

@@ -11,9 +11,12 @@ interface ActInfo {
 }
 
 const acts: ActInfo[] = [
-  { id: 'act1', title: 'Act I', subtitle: 'Sky Flight', song: '"Something Has Changed Within Me"' },
+  { id: 'act1', title: 'Act I', subtitle: 'Sky Flight', song: '"Something Has Changed"' },
   { id: 'act2', title: 'Act II', subtitle: 'Emerald City', song: '"Defying Gravity"' },
-  { id: 'act3', title: 'Act III', subtitle: 'The Finale', song: '"For Good"' },
+  { id: 'act3', title: 'Act III', subtitle: 'Boss Battle', song: '"For Good"' },
+  { id: 'act4', title: 'Act IV', subtitle: 'The Stage', song: '"Popular"' },
+  { id: 'act5', title: 'Act V', subtitle: 'Ballroom Maze', song: '"Dancing Through Life"' },
+  { id: 'act6', title: 'Act VI', subtitle: 'The Escape', song: '"No One Mourns"' },
 ];
 
 export class LevelSelectScene implements Scene {
@@ -39,9 +42,9 @@ export class LevelSelectScene implements Scene {
     // Check for act selection
     if (game.input.tap) {
       const h = game.height;
-      const cardStartY = h * 0.22;
-      const cardHeight = h * 0.18;
-      const cardGap = h * 0.04;
+      const cardStartY = h * 0.16;
+      const cardHeight = h * 0.11;
+      const cardGap = h * 0.02;
 
       for (let i = 0; i < acts.length; i++) {
         const act = acts[i];
@@ -61,11 +64,13 @@ export class LevelSelectScene implements Scene {
 
   private isActLocked(game: GameEngine, actId: ActId): boolean {
     if (actId === 'act1') return false;
-    if (actId === 'act2') return !game.state.lastCompletedAct;
-    if (actId === 'act3') {
-      return game.state.lastCompletedAct !== 'act2' && game.state.lastCompletedAct !== 'act3';
-    }
-    return true;
+    const prev = game.state.lastCompletedAct;
+    if (!prev) return true;
+    // Each act unlocks when the previous act has been completed
+    const order: ActId[] = ['act1', 'act2', 'act3', 'act4', 'act5', 'act6'];
+    const actIndex = order.indexOf(actId);
+    const completedIndex = order.indexOf(prev);
+    return completedIndex < actIndex - 1;
   }
 
   render(game: GameEngine, ctx: CanvasRenderingContext2D) {
@@ -105,11 +110,11 @@ export class LevelSelectScene implements Scene {
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // Act cards
-    const cardStartY = h * 0.22;
-    const cardHeight = h * 0.18;
-    const cardGap = h * 0.04;
-    const cardMargin = 25 * scale;
+    // Act cards — compact to fit 6
+    const cardStartY = h * 0.16;
+    const cardHeight = h * 0.11;
+    const cardGap = h * 0.02;
+    const cardMargin = 20 * scale;
 
     for (let i = 0; i < acts.length; i++) {
       const act = acts[i];
@@ -157,18 +162,18 @@ export class LevelSelectScene implements Scene {
       const textAlpha = isLocked ? 0.4 : 1;
       ctx.globalAlpha = textAlpha;
 
-      drawText(ctx, act.title, w / 2, cy + cardHeight * 0.25, 20 * scale, COLORS.gold);
-      drawText(ctx, act.subtitle, w / 2, cy + cardHeight * 0.5, 14 * scale, '#ddd');
-      drawText(ctx, act.song, w / 2, cy + cardHeight * 0.72, 10 * scale, '#aaa');
+      drawText(ctx, act.title, w / 2, cy + cardHeight * 0.22, 14 * scale, COLORS.gold);
+      drawText(ctx, act.subtitle, w / 2, cy + cardHeight * 0.5, 11 * scale, '#ddd');
+      drawText(ctx, act.song, w / 2, cy + cardHeight * 0.75, 8 * scale, '#aaa');
 
-      // Stars
+      // Stars (smaller for compact cards)
       for (let s = 0; s < 3; s++) {
-        const sx = w / 2 - 25 * scale + s * 25 * scale;
+        const sx = w / 2 - 18 * scale + s * 18 * scale;
         const sy = cy + cardHeight * 0.92;
         ctx.fillStyle = s < stars ? COLORS.gold : 'rgba(100, 100, 100, 0.3)';
         ctx.beginPath();
         for (let si = 0; si < 10; si++) {
-          const sr = si % 2 === 0 ? 6 * scale : 3 * scale;
+          const sr = si % 2 === 0 ? 4 * scale : 2 * scale;
           const angle = (si * Math.PI) / 5 - Math.PI / 2;
           const px = sx + Math.cos(angle) * sr;
           const py = sy + Math.sin(angle) * sr;
@@ -182,11 +187,11 @@ export class LevelSelectScene implements Scene {
       // Lock icon
       if (isLocked) {
         ctx.fillStyle = '#666';
-        ctx.fillRect(w / 2 - 8 * scale, cy + cardHeight * 0.3, 16 * scale, 12 * scale);
+        ctx.fillRect(w / 2 - 6 * scale, cy + cardHeight * 0.3, 12 * scale, 9 * scale);
         ctx.strokeStyle = '#666';
-        ctx.lineWidth = 2 * scale;
+        ctx.lineWidth = 1.5 * scale;
         ctx.beginPath();
-        ctx.arc(w / 2, cy + cardHeight * 0.28, 6 * scale, Math.PI, 0);
+        ctx.arc(w / 2, cy + cardHeight * 0.28, 5 * scale, Math.PI, 0);
         ctx.stroke();
       }
 
