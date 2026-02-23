@@ -17,7 +17,7 @@ const acts: ActInfo[] = [
   { id: 'act4', title: 'Act IV', subtitle: 'The Stage', song: '"Popular"' },
   { id: 'act5', title: 'Act V', subtitle: 'Ballroom Maze', song: '"Dancing Through Life"' },
   { id: 'act6', title: 'Act VI', subtitle: 'The Escape', song: '"No One Mourns"' },
-  { id: 'act7', title: 'Act VII', subtitle: 'Gravity Flip', song: '"The Wizard and I"' },
+  { id: 'act7', title: 'Act VII', subtitle: 'Bubble Float', song: '"The Wizard and I"' },
   { id: 'act8', title: 'Act VIII', subtitle: 'Two Zones', song: '"What Is This Feeling?"' },
   { id: 'act9', title: 'Act IX', subtitle: 'Grand Finale', song: '"For Good (Finale)"' },
 ];
