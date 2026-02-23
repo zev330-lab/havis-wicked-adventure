@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a0033"/>
+      <stop offset="100%" stop-color="#003322"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="40%">
+      <stop offset="0%" stop-color="#00ff6644"/>
+      <stop offset="100%" stop-color="#00ff6600"/>
+    </radialGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" fill="url(#bg)" rx="28.799999999999997"/>
+  <rect width="192" height="192" fill="url(#glow)" rx="28.799999999999997"/>
+
+  <!-- Emerald city silhouette -->
+  <g transform="translate(96, 105.60000000000001)" fill="#006633">
+    <rect x="-5.76" y="-53.760000000000005" width="11.52" height="53.760000000000005"/>
+    <circle cx="0" cy="-53.760000000000005" r="7.68"/>
+    <polygon points="-2.88,-59.519999999999996 0,-72.96000000000001 2.88,-59.519999999999996"/>
+    <rect x="-24.96" y="-34.56" width="15.36" height="34.56"/>
+    <rect x="9.600000000000001" y="-34.56" width="15.36" height="34.56"/>
+    <rect x="-42.24" y="-23.04" width="11.52" height="23.04"/>
+    <rect x="30.72" y="-23.04" width="11.52" height="23.04"/>
+  </g>
+
+  <!-- W letter -->
+  <text x="96" y="80.64" font-family="Georgia, serif" font-size="53.760000000000005" font-weight="bold" fill="#33ff99" text-anchor="middle" dominant-baseline="central">W</text>
+
+  <!-- Stars -->
+  <polygon points="28.799999999999997,28.799999999999997 30.72,23.04 34.56,28.799999999999997 31.68,32.64 29.759999999999998,32.64" fill="#ffd700"/>
+  <polygon points="163.2,28.799999999999997 165.12,23.04 168.96,28.799999999999997 166.07999999999998,32.64 164.16,32.64" fill="#ff69b4"/>
+
+  <!-- Havi text at bottom -->
+  <text x="96" y="157.44" font-family="Georgia, serif" font-size="17.28" fill="#ffd700" text-anchor="middle">HAVI</text>
+</svg>
